@@ -1,0 +1,81 @@
+---
+title: "Discussion 4"
+author: "Cameron Jones"
+date: 'Week of October 3'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+```
+
+# Concept Review: dplyr II
+
+### Data: Diamond Prices
+
+```{r}
+head(diamonds) # diamonds is one of ggplot2's built in dataframes! See them all with data().
+```
+
+```{r, message = FALSE, fig.height = 3, fig.width = 4}
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram() +
+  ggtitle("Diamond Prices", subtitle = "From the ggplot2 dataframe 'diamonds'") +
+  theme_minimal()
+```
+
+## Concept: Summarize Syntax Common Error
+
+```{r, error = TRUE}
+# This line will work, but does not follow the standard syntax of summarize(newVariableName = formula), and will likely lead to errors down the line
+diamonds %>% group_by(cut) %>% summarize(mean(price)) #%>% arrange(mean(price))
+
+# This command will not work - it will throw the error "Object 'price' not found"; because it will look for a column called price, which is no longer there after we call summarize(mean(price)) (see above)
+diamonds %>% group_by(cut) %>% summarize(mean(price)) %>% arrange(mean(price))
+
+# This is how to execute the above command correctly - by NAMING our summarize() results
+diamonds %>% group_by(cut) %>% summarize(averagePrice = mean(price)) %>% arrange(desc(averagePrice))
+```
+
+
+## Concept: More Complex group_by() Operations
+
+What if I wanted to know the mean price of diamonds by the COMBINATION of their cut and color?
+
+```{r, message = FALSE}
+diamonds %>% group_by(cut, color) %>% summarize(combinedAveragePrice = mean(price), numDiamonds = n())
+
+# Recall from the original example that there are 5 different cuts and 7 different colors. Therefore, there are 5x7=35 different cut-color combinations (which all appear in the data!)
+```
+
+```{r, message = FALSE}
+# We can extend this to as many grouping variables as we want! Which combinations of cut-color-clarity are the most expensive?
+
+diamonds %>% group_by(cut, color, clarity) %>% summarize(combinedAveragePrice = mean(price), numDiamonds = n()) %>% ungroup() %>% slice_max(combinedAveragePrice, n = 5)
+```
+
+
+## Concept: nrow() vs n() vs count()
+
+```{r, error = TRUE}
+# nrow() is NOT a dplyr command and should not be used anywhere inside dplyr commands.
+nrow(diamonds)
+ncol(diamonds)
+
+
+# n() is a helper function for use within summarize. It is an expression which returns the number of rows WITHIN EACH GROUP as defined by group_by(). n() DOES NOT ACCEPT ARGUMENTS.
+
+diamonds %>% summarize(numRows = n())
+diamonds %>% group_by(cut) %>% summarize(numRowsByCut = n())
+
+
+# count(x) is NOTHING MORE than a shorter version of: group_by(x) %>% summarize(n = n())!
+
+diamonds %>% count(cut)
+
+# For this reason, you should NEVER use count() inside of summarize()!
+diamonds %>% group_by(cut) %>% summarize(numByCut = count(cut))
+```
+
+
+

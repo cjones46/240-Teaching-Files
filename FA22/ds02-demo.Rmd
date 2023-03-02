@@ -1,0 +1,182 @@
+---
+title: "Discussion 2 "
+author: "Cameron Jones"
+date: 'Week of September 19'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+
+Orange$Tree = factor(Orange$Tree, levels = c("1", "2", "3", "4", "5"))
+```
+
+# Logistics
+
+- Discussion 1, Homework 1 assignments graded
+  + Take a look at grades/comments
+  + Let me know if you have any questions
+  
+- In discussion groups for 5+ weeks; get to know each other!
+  + A group-mate may be on Zoom
+  + Even if you are all in-person, it is nice to share your screen with everyone else so you don't crowd one laptop
+  
+- Discussion assignments
+  + Only **one person** has to submit.
+  + You should submit at the end of the discussion period **even if you didn't finish**.
+  
+
+# Content Review: ggplot2
+
+#### Our Data: Orange Tree Circumference vs. Age
+
+```{r}
+Orange[c(1:3, 8:10),] # "Orange" is one of many of R's built-in datasets! You can see them all using data().
+```
+
+# Concept: ggplot() Arguments and Aesthetics
+
+```{r, message = FALSE, fig.height = 3, fig.width = 6}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference)) + 
+  
+  # Start every plot with ggplot(data, aesthetics)
+  # Aesthetics which are listed here, called "global" aesthetics, will apply to any geometry functions added below
+  
+  geom_point()
+
+```
+
+#### Variable vs. Constant Aesthetics
+
+```{r, message = FALSE, fig.height = 3, fig.width = 6}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference)) + 
+  
+  # If I want to change a property of the geometry on the plot, (e.g. its color or size) in a constant way across the entire plot (e.g. make every point red and large) we do NOT list those in aes().
+  
+  geom_point(color = "red", size = 5)
+```
+
+```{r, message = FALSE, fig.height = 3, fig.width = 6}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference, color = Tree)) + 
+  
+  # If I want to change a property of the geometry based on a VARIABLE IN THE DATASET (e.g. color each point by the individual tree identifier), that is done by aes().
+  
+  geom_point(size = 5) + 
+  geom_line()
+
+  # ggplot automatically creates the appropriate legend when you specify a variable aesthetic.
+```
+
+# Concept: Faceting
+
+```{r}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference)) +
+  geom_point() +
+  geom_line() +
+  
+  # In some scenarios, it may be useful to plot each tree on its own plot, rather than all of them together. facet_wrap() takes in a single CATEGORICAL variable, splits the dataset into multiple datasets based on the levels of that categorical variable, and plots them all separately.
+  
+  facet_wrap(vars(Tree))
+
+# facet_wrap will do its best to choose a reasonable number of rows and columns.
+
+```
+
+```{r}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference)) +
+  geom_point() +
+  geom_line() +
+  
+  facet_grid(. ~ Tree)
+
+# facet_grid(rows ~ cols) allows you to specify alternate layouts
+```
+
+
+```{r}
+ggplot(data = Orange, mapping = aes(x = age, y = circumference)) +
+  geom_point() +
+  geom_line() +
+  
+  facet_grid(Tree ~ .)
+```
+
+# Concept: Residuals
+
+#### What is a residual?
+
+```{r}
+x = data.frame(x = c(1, 2, 3), y = c(3, 7.5, 8), yhat = 2*c(1,2,3) + 2)
+
+ggplot(x, aes(x, y)) +
+  geom_point(size = 5) +
+  geom_line(aes(x, yhat), color = "blue")
+```
+
+```{r}
+ggplot(x, aes(x, y)) +
+  xlim(1, 3) +
+  ylim(2, 8) +
+  geom_point(size = 5) +
+  geom_line(aes(x, yhat), color = "blue") +
+  
+  annotate("segment", x = 1, xend = 1, y = 4, yend = 3, color = "red") +
+  annotate("segment", x = 2, xend = 2, y = 6, yend = 7.5, color = "red") +
+  annotate("segment", x = 2.86, xend = 2.99, y = 6.5, yend = 7.87, arrow = arrow(ends = "last", length = unit(.2, "cm"))) +
+  annotate("text", x = 1.1, y = 3.5, label = "r = -1", color = "red") +
+  annotate("text", x = 2.1, y = 7, label = "r = 1.5", color = "red") +
+  annotate("text", x = 2.86, y = 6.4, label = "r = 0", color = "red")
+```
+
+#### Example: Bad Fit
+
+```{r}
+Orange$residualsBad = mean(Orange$circumference) - Orange$circumference
+
+ggplot(Orange, aes(age, circumference, size = abs(residualsBad))) +
+  geom_point() +
+  geom_hline(yintercept = mean(Orange$circumference), color = "blue") +
+  theme(
+    legend.position = "none"
+  )
+```
+
+```{r}
+ggplot(Orange, aes(x = residualsBad)) +
+  geom_histogram(fill = "papayawhip", color = "black", bins = 8) +
+  xlim(c(-100, 100)) +
+  ylim(c(0, 15))
+```
+
+```{r}
+ggplot(Orange, aes(x = residualsBad)) +
+  geom_density(fill = "papayawhip")
+```
+
+#### Example: The Best Fit "Regression" Line
+
+```{r, message = FALSE}
+model = lm(circumference ~ age, Orange)
+
+Orange$residuals = model$residuals
+
+ggplot(Orange, aes(age, circumference, size = abs(residuals))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F) +
+  scale_size_continuous(limits = c(0, 100)) +
+  theme(
+    legend.position = "none"
+  )
+```
+
+```{r}
+ggplot(Orange, aes(x = residuals)) +
+  geom_histogram(fill = "papayawhip", color = "black", bins = 8) +
+  xlim(c(-100, 100))
+```
+
+```{r}
+ggplot(Orange, aes(x = residuals)) +
+  geom_density(fill = "papayawhip") +
+  xlim(c(-100, 100))
+```

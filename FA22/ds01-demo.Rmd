@@ -1,0 +1,57 @@
+---
+title: "Stat 240 - Discussion 1"
+author: "Cameron Jones"
+date: 'Week of September 12'
+output: html_document
+---
+
+## Personal Introduction
+
+* Cameron Jones
+  + First year PhD student in Statistics
+  + Graduated this past May with my Bachelor's in Statistics from UW-Madison
+  + Hartland, WI
+  
+* How you can reach me
+  + Email (cjones46@wisc.edu)
+  + Discord
+  + Office drop-in hours (Thursday 11:00am - 12:30pm in MSC 1210)
+  + Statistics Learning Center
+  + Before, during, and after discussion
+  + Before and after lecture
+
+See my announcement on Canvas or the course home page for more details.
+
+
+## The Course and Discussion
+
+* Overall course flow
+  + Five(ish) week crash course in tidyverse/R basics with discussion group 1
+  + Midterm and Switch Groups
+  + Remainder of semester spent implementing basic statistical concepts in R with discussion group 2
+  
+* Week-to-week flow
+  + Exposure to new content during lectures
+  + Low-stakes group discussion assignment for completion (due Wednesdays - will often complete during discussion)
+  + Higher-stakes individual assignment for correctness (due Fridays)
+  + Additional small reading quizzes assigned by Bret
+  
+* What does discussion look like?
+  + Short review of concepts (~ 5 minutes)
+  + Remaining time spent on group discussion assignment
+  + Participation is 10% of your grade - you get two drops
+  
+## Today
+
+* **Individual** assignment to make sure your R, RStudio, and tidyverse work, that you can interact with course files correctly, and practice knitting an html file. 
+
+### Important Notes for the Discussion Assignment
+
+* Download **ds01-setup.Rmd** to the directory ```COURSE/discussion/ds01``` and **edit that file! You do not need to create a new file.**
+
+* It will look for the file ```lake-mendota-winters-2022.csv``` in the directory ```COURSE/data```. Make sure that file is in the correct location. **(NOT next to your R Markdown file in the ds01 directory.)**
+
+```{r}
+getwd()
+```
+

@@ -1,0 +1,113 @@
+---
+title: "Discussion 8 - Demo"
+author: "Cameron Jones"
+date: 'Week of October 31'
+output: html_document
+---
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+# Logistics
+
+- HW6 Graded, HW7 Due Saturday
+
+- Final Project Starts Today
+  +   20 minutes discussion assignment, rest of time for project proposal
+  +   Go to course home page, "Final Project Information" link, everything under "Project Proposal" due next Monday, Nov 7
+
+## Concept Review
+
+### Simulation vs. Theory
+
+In this course, we often use _simulation_ to verify that observed results fall in line with theory.
+
+Thus, the distinction between finding moments like the mean and standard deviation from _observed, simulated_ data and from _theoretical formulas_ is important to understand.
+
+Let's say I hypothesize that the mean of a binomial variable is $n*p$. I can test this by generating random numbers from the binomial distribution and checking if the mean I observe is equal to n*p.
+
+In this example, I test if the mean of $Binom(10, 0.5)$ is $10*0.5 = 5$.
+
+```{r, echo = FALSE}
+set.seed(4)
+```
+
+
+```{r}
+numberOfSimulations = 3
+n = 10
+p = 0.5
+
+# A single simulation; generate 3 values from the distribution Binom(10, 0.5)
+simulation = rbinom(numberOfSimulations, n, p)
+print(simulation)
+
+# The mean of this simulation; is this n*p = 10*0.5 = 5?
+print(simulation %>% mean() %>% round(4))
+
+# If we do it again, we get a different value.
+print(rbinom(numberOfSimulations, n, p) %>% mean() %>% round(4))
+
+# How do we make sure the mean we get from the simulation is close to the actual mean? We sample a huge amount of random numbers! This should be closer to 5
+numberOfSimulations = 100
+print(rbinom(numberOfSimulations, n, p) %>% mean() %>% round(4))
+
+# This should be almost exactly 5
+numberOfSimulations = 1000000
+print(rbinom(numberOfSimulations, n, p) %>% mean() %>% round(4))
+
+```
+
+The simulation verifies that the mean of $Binom(10, 0.5)$ is $10*0.5 = 5$.
+
+### Binomial vs. Normal
+
+The binomial distribution is _discrete_ ; it counts the number of successful trials, so it must be a non-negative integer. Recall the BINS acronym from lecture and last discussion for identifying binomial random variables.
+
+```{r}
+gbinom(10, 0.5, size = 2) +
+  geom_binom_density(10, 0.5, a = 4, b = 4, color = "red", size = 2)
+```
+
+The probability that a binomial variable takes on an exact value is known and easily calculable; we have the closed mathematical formula for this, but all you need to know is that it is calculable with ```dbinom(x, n, p)```.
+
+```{r}
+dbinom(4, 10, 0.5) # The height of the red bar above; this is P(X = 2), where X ~ Binom(5, 0.6)
+```
+
+The normal distribution is _continuous_; it can take on any value in a range, not limited to whole or positive numbers.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_segment(aes(x = 4, xend = 4, y = 0, yend = dnorm(4, mean = 5, sd = 2)), color = "red", size = 2)
+```
+
+The probability that a _normal_ variable takes on a specific value is _arbitrary_, because it is continuous. There are infinitely many real numbers in ANY interval, so the probability you get EXACTLY a certain value from a continuous distribution is effectively 0.
+
+Attempting to calculate this with ```dnorm``` refers to the height of the density function at a specific point.
+
+```{r}
+dnorm(4, mean = 5, sd = 2) # The height of the red bar above.
+```
+
+```{r}
+rnorm(100, 5, 2) 
+
+# Notice how none of these random values are exactly 4, even though "pnorm tells us" a quarter of them should be
+sum(rnorm(100, 5, 2) == 4)
+```
+
+Where as the probability of specific points has little meaning, _area_ under the normal curve does have real meaning.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_norm_fill(5, 2, b = 4, fill = "red")
+```
+
+```{r}
+pnorm(4, 5, 2) #The red area above; this is equivalent to P(X <= 4)!
+```
+

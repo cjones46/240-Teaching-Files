@@ -1,0 +1,85 @@
+---
+title: "Discussion 9 - Demo"
+author: "Cameron Jones"
+date: "Week of November 7"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../../scripts/ggprob.R")
+```
+
+# Concept Review
+
+### Models
+
+A **model** is a theoretical statement for how values of a variable are generated. It relates the observed data (a random variable) to the parameter we want to estimate.
+
+It is something that we assume is true about the structures that generate the data, not something we test. The model lays the framework for the test.
+
+It often takes the form of a random variable following a distribution (though it will be an equation when we reach regression).
+
+When we conduct statistical inference, we are trying to estimate a parameter of that distribution (or equation) - so inherently, we do not know what it is. If we did, there would be no need for statistics!
+
+E.g. You want to estimate the free throw shooting percentage of the UW basketball team. Write a model for the number of free throws $F$ they make in a given game. If you assume the free throws are independent from each other, then you can say:
+
+$$
+F \sim Binomial(n, p)
+$$
+
+Where $n$ is the number of free throws they take in a given game, and $p$ is their true, but unknown, chance of making a single free throw. We wish to estimate $p$.
+
+### Hypotheses
+
+A **hypothesis** is a statement about the value of an unknown parameter that can be right or wrong; in fact, that's what we want to figure out. When setting up statistical tests, we must specify two hypotheses; the _null_ hypothesis, and the _alternative_ hypothesis.
+
+Let's say I want to test whether Wisconsin is an above average free throw shooting team.
+
+The null hypothesis is that they are an average free throw shooting team (NCAA average = 0.68). In general, the null hypothesis is that "nothing unusual is happening", or "everything is random", or "there is no relationship".
+
+$$
+H_0: p = 0.68
+$$
+
+The alternative hypothesis is that they are an above average shooting team, so their true probability of making any given free throw is above 0.68. In general, the alternative hypothesis is that "something is happening", "there is a relationship", etc.
+
+$$
+H_A: p > 0.68
+$$
+
+Note that the above alternative hypothesis is "one-sided"; we are testing if the true parameter value is ABOVE the null value, not whether it is DIFFERENT.
+
+### Using the Null Hypothesis to Calculate a P-Value
+
+When we observe data, we can refer back to our model and our null hypothesis to calculate how likely that data (or something more extreme) would be to occur if the null hypothesis was true.
+
+Wisconsin made 465 out of 626 free throws last year.
+
+Given that the null hypothesis is true, $F$ follows this distribution. Under that distribution, how likely are we to make 18 free throws out of 20?
+
+$$
+F|H_0 \sim Binomial(626, 0.68)
+$$
+
+```{r, echo = FALSE}
+gbinom(626, 0.68, size = 2, a = 350, b = 500) +
+  geom_binom_density(626, 0.68, a = 465, color = "red", size = 2) +
+  theme_minimal()
+```
+
+```{r}
+1-pbinom(17-1, 23, 0.68)
+```
+
+If we were really a 68% shooting team, then the probability that by _pure chance_ we make 465 or more out of 626 is just 0.03%. Because this probability is so low, we *infer* that it is not chance which has driven this probability so high, but that the true free throw shooting percentage is greater than 0.68.
+
+**Interpretation in context:** We have strong evidence that the Badgers are an above average free throw shooting team.
+
+Note: it is not impossible to shoot this well if your true percentage is 68%. It is still possible that the null hypothesis is true, and we can never prove it impossible. However, we have strong evidence against it being true, and can prove that it is very _unlikely_ to be true.
+
+
+
+
+
+
