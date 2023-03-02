@@ -1,0 +1,103 @@
+---
+title: "Discussion 3"
+author: "Cameron Jones"
+date: 'Week of February 13'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+# Concept Review: dplyr
+
+The built-in R dataframe "chickwts" contains weight measurements on 71 baby chickens after being fed one of six diets for a month and a half. 
+
+```{r}
+slice_sample(chickwts, n = 8)
+```
+
+# Concept: The Pipe (%>%) Operator
+
+(helpful tip: keyboard shortcut for the pipe)
+- Windows: ctrl+shift+M
+- Mac: command+shift+M
+
+```{r}
+# What it does: Just passes the thing on the "left" into the thing on the "right" as the first argument
+x = c(2, 3, 5, NA)
+
+sd(x, na.rm = T)
+x %>% sd(na.rm = T)
+```
+
+```{r}
+# Motivation: Making your dplyr work flow easier to read and produce!
+chickwts %>% 
+  group_by(feed) %>% 
+  summarize(avgWeight = mean(weight)) %>% 
+  arrange(avgWeight)
+
+# Everything you can do with the pipe, you can do without it... but it's ugly and difficult to write
+arrange(summarize(group_by(chickwts, feed), avgWeight = mean(weight)), avgWeight)
+```
+
+```{r}
+# All dplyr commands take a dataframe in, and spit a dataframe out; so they can be connected with the pipe!
+
+# arrange spits out a (sorted) dataframe; that dataframe gets passed in as the first argument to filter
+
+arrange(chickwts, weight) #%>% filter(feed == "horsebean")
+arrange(chickwts, weight) %>% filter(feed == "horsebean")
+```
+
+# Concept: Filtering Rows and Columns with filter() and select()
+
+## filter()
+
+filter() reduces the dataframe to the set of ROWS which satisfy a given condition.
+
+```{r}
+chickwts %>% 
+  filter(feed == "horsebean") # Double equals '==' tests for equality.
+
+chickwts %>% 
+  filter(weight > 320)
+
+# Other (in)equality testers: <, <=, >=, >, %in% (coming up!)
+```
+
+## select()
+
+select() reduces a dataframe to a set of specified COLUMNS.
+
+```{r}
+chickwts %>% 
+  select(weight) %>% 
+  head()
+```
+
+
+# Concept: Creating Summary Tables with group_by() and summarize()
+
+group_by() and summarize() work together to reduce a dataframe of many rows down to a small dataframe which contains summary measures.
+
+```{r}
+
+# Summarize alone, with no groups, just returns a specified summary of the entire dataframe
+
+chickwts %>% 
+  summarize(avgWeight = mean(weight),
+            stdDevWeight = sd(weight))
+
+# When a group_by is specified before summarize, those summaries are provided within each group
+
+chickwts %>% 
+  group_by(feed) %>% 
+  summarize(avgWeight = mean(weight),
+            stdDevWeight = sd(weight))  
+
+# Note the syntax within summarize: newColumnName = formula(existingColumn)
+
+```
+

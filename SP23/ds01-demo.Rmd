@@ -1,0 +1,52 @@
+---
+title: "Stat 240 Discussion"
+author: "Cameron Jones"
+date: 'Week of January 30'
+output: html_document
+---
+
+## Personal Introduction
+
+* Cameron Jones
+  + First year PhD student in Statistics
+  + Graduated this past May with my Bachelor's in Statistics from UW-Madison
+  + From Hartland, WI
+  + Huge fan of Premier League and all sports statistics!
+  
+* How you can reach me
+  + Email (cjones46@wisc.edu)
+  + Discord
+  + Office drop-in hours (Thursday 1:15 - 2:45pm in MSC 1274)
+
+See my announcement on Canvas and/or the course home page for more details.
+
+
+## The Course and Discussion
+
+* Overall course flow
+  + Five week crash course in tidyverse/R basics with discussion group 1
+  + Midterm, then switch discussion groups
+  + Remainder of semester spent implementing basic statistical concepts in R with discussion group 2
+  
+* Week-to-week flow
+  + Exposure to new content during lectures
+  + Low-stakes group discussion assignment for completion (on Monday)
+  + Higher-stakes individual assignment for correctness (due Fridays)
+  
+* What does discussion look like?
+  + Short review of concepts (~ 5 minutes)
+  + Remaining time spent on group discussion assignment
+  + Participation is 10% of your grade - you get two free drops
+  
+## Today
+
+* **Individual** assignment to make sure your R, RStudio, and tidyverse work, that you can interact with course files correctly, and practice knitting an html file. 
+
+### Important Notes for the Discussion Assignment
+
+* Download **ds01-setup.Rmd** to the directory ```COURSE/discussion/ds01``` and **edit that file directly! You do not need to create a new file.**
+
+* It will look for the file ```lake-mendota-winters-2022.csv``` in the directory ```COURSE/data```. Make sure that file is in the correct location. **(NOT next to your R Markdown file in the ds01 directory.)**
+
+* After clicking knit, it will create ```ds01-setup.html``` next to ```ds01-setup.Rmd```. **Please submit both!** (this is true for homework assignments too... it helps me give you more points if something goes wrong!)
+

@@ -1,0 +1,142 @@
+---
+title: "Discussion 4"
+author: "Cameron Jones"
+date: 'Week of February 20'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+# Concept Review: lubridate and dplyr II
+
+### Data: Lakers 2008-2009
+
+```{r}
+# lakers is one of lubridate's built in dataframes! See them all with data().
+lakers %>%
+  select(date, etype, team, player, result, points) %>% 
+  head()
+```
+
+## Concept: Parse Strings into Dates with lubridate
+
+When you read in data with dates in it, very often it will read in as a NUMBER (integer) or a WORD (string). 
+
+However, if we want to do date-specific operations on it (e.g. extract the month or the day of the week), it needs to be a DATE.
+
+```{r}
+lakers %>% 
+  select(date) %>% 
+  head(n = 1)
+```
+
+The ORIGINAL date as we read it in, is in the form **Y**ear (2008) **M**onth (10) **D**ay (28), so we use the function **ymd()**.
+
+Functions like ymd() exist for every possible form of dates, including mdy(), dmy(), et cetera. They are based on how the ORIGINAL date comes in.
+
+```{r}
+lakers2 = lakers %>% 
+  rename(old_date = date) %>% 
+  
+  # change date from an INTEGER to a DATE
+  mutate(new_date = ymd(old_date)) %>% 
+  
+  select(new_date, old_date)
+
+lakers2 %>% 
+  distinct() %>% 
+  head()
+
+str(lakers2)
+```
+
+Note the type of new_date is Date and the type of old_date is int.
+
+## Concept: Extract Components from Dates
+
+Once we have converted the column into a date, we can do date-based operations on it.
+
+```{r}
+lakers2 %>% 
+  mutate(
+    new_month = month(new_date, label = TRUE),
+    new_weekday = wday(new_date, label = TRUE),
+    new_dayInYear = yday(new_date)
+  ) %>% 
+  distinct() %>% 
+  head()
+         
+```
+
+## Complicated Dplyr Examples
+< not to go over in discussion; for students' additional review if they want >
+
+**Question:** Calculate the percent of shots the Lakers made in each game. Show the Lakers' best and worse three games by percentage of shots made.
+
+We have three tasks here:
+- filter to events which are shots taken by the Lakers
+- calculate the proportion of made shots per game (reducing the dataframe to one row per game)
+- obtain the highest and lowest shot percentage games
+
+```{r}
+# Step 1
+lakers_shots = lakers %>% 
+  filter(etype == "shot" & team == "LAL")
+```
+
+```{r}
+# Step 2
+lakers_shots_calculations = lakers_shots %>% 
+  
+  # we want a row for each DATE, which identifies games uniquely
+  group_by(date) %>%
+  
+  summarize(
+    # the expression result == "made" is a list of TRUE and FALSE. summing this list counts the number of TRUEs; i.e. the number of shots made
+    n_shots_made = sum(result == "made"), 
+    
+    # within each DATE, how many rows are there? because we have filtered down to just shots, this is the number of shots taken
+    n_shots_taken = n(),
+    
+    shot_percentage = n_shots_made/n_shots_taken
+  )
+```
+
+```{r}
+# Step 3
+lakers_shots_calculations %>% 
+  slice_max(shot_percentage, n = 3)
+
+lakers_shots_calculations %>% 
+  slice_min(shot_percentage, n = 3)
+```
+
+**Question:** Which Lakers player had the highest free throw percentage within home games, and which Lakers player had the highest free throw percentage within away games? Players must have taken at least 20 free throws (within the specific home/away game type) to be eligible to appear on the list.
+
+I encourage you to try this one on your own... the solution code is in the .Rmd, but I don't display it in the knitted html! 
+
+This will require one initial workflow which is filter %>% group_by (with two variables) %>% summarize to calculate the free throws made, taken, and percentage, then a second group_by %>% slice_max to display the two-group dataframe below. I leave it to you to figure out how or where to filter out by taken at least 20 free throws.
+
+```{r, echo = FALSE, message = FALSE}
+lakers %>%  
+  filter(etype == "free throw", team == "LAL") %>% 
+  group_by(player, game_type) %>% 
+  summarize(
+    ft_made = sum(result == "made"),
+    ft_taken = n(),
+    ft_percentage = ft_made/n()
+  ) %>% 
+  #ft_taken does not exist in the initial dataframe, but now that the group_by %>% summarize has reduced the dataframe to player/location splits instead of individual events, ft_taken exists and we can filter by it
+  filter(ft_taken > 20) %>% 
+  
+  group_by(game_type) %>% 
+  
+  # slice_max returns the top n rows within each level of group_by(); we want the top home player and the top away player, so we group_by game_type.
+  slice_max(ft_percentage, n = 1)
+```
+
+
+
