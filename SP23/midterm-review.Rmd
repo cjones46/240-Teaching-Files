@@ -1,0 +1,118 @@
+---
+title: "STAT 240 Midterm Review"
+output: html_document
+author: "Ryan Yee"
+date: "2023-03-06"
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+# Content
+
+* `ggplot`
+* base r
+  * descriptive statistics
+  * variable names
+* `dplyr`
+  * `filter()`
+  * `mutate()`
+  * `group_by()` & `summarize()`
+* `lubridate`
+* Joinning
+  * `left_join()`
+  * `inner_join()`
+  * `outer_join()`
+  * `anti_join()`
+* Pivoting
+  * `pivot_longer()`
+  * `pivot_wider()`
+
+## Data
+
+We'll use the built-in `mtcars` data to review.
+
+```{r}
+data("mtcars")
+head(mtcars, n = 10)
+```
+
+# ggplot
+
+`ggplot` utilizes aesthetic mappings to generalize the plotting of data to many different formats.
+It is important to remember the `aes()` arguments different `geom` functions take.
+For example, let's look at `geom_bar()` vs. `geom_col()`.
+
+```{r}
+library(ggplot2)
+
+mtcars %>% ggplot() +
+  geom_bar(aes(x = cyl))
+```
+
+```{r}
+mtcars %>% 
+  group_by(cyl) %>%
+  summarize(n = n()) %>%
+  ggplot() +
+  geom_col(aes(x = cyl, y = n))
+```
+
+We get the same graph in both instances, but `geom_col()` requires a `y` argument while `geom_bar()` does not.
+
+# dplyr
+
+## filter
+
+`filter()` takes a dataframe and logical statement as inputs. 
+It outputs the rows where that logical statement is `TRUE`.
+
+```{r}
+library(dplyr)
+
+filter(mtcars, cyl == 6)
+```
+
+## mutate
+
+`mutate()` creates a new column in your dataframe.
+If you assign a new variable the same name as a column already in your dataframe, that column is overwritten.
+
+```{r}
+mutate(mtcars, new_col = mpg * cyl)
+```
+
+```{r}
+mutate(mtcars, new_col = "Overwrite")
+```
+
+## group_by / summarize
+
+`group_by()` and `summarize()` are used in tandem to collapse rows of your dataframe into a summary.
+The variables specified in `group_by()` uniquely group the output rows.
+`summarize()` is used similarly to `mutate()` after grouping.
+
+```{r}
+mtcars %>%
+  group_by(cyl) %>%
+  summarize(avg_mpg = mean(mpg))
+```
+
+# lubridate
+
+`lubridate` makes it easy to work with dates in R.
+Use `lubridate` to turn strings that look like dates into datetime objects that can be more flexibly used.
+
+```{r, warning=FALSE, message=FALSE}
+library(lubridate)
+
+typeof("2023-03-06")
+ymd("2023-03-06") %>% typeof()
+month(ymd("2023-03-06"))
+```
+
+## Joining 
+
+![This image won't show up on your local computer if you don't have tidyrCheatsheet.png downloaded and next to this .Rmd file.](tidyrCheatsheet.png)
+
