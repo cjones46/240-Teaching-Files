@@ -1,0 +1,156 @@
+---
+title: "Discussion 7 - Demo"
+author: "Cameron Jones"
+date: "Week of March 27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+
+# Concept Review
+
+### Expectation and Variance
+
+Knowing a random variable follows a common distribution is useful because statisticians have derived shorter, more convenient formulas for the expectation and variance of these distributions.
+
+For example, the general formula for the expectation (the average value) of a random variable is:
+
+$$
+\mu = \mathbb{E}(X) = \sum x P(X=x)
+$$
+
+However, when we know a variable follows the binomial distribution, this formula simplifies to:
+
+$$
+\mu = \mathbb{E}(Binom(n, p)) = n*p
+$$
+
+A similar result holds for the variance (a measure of the spread) of a random variable. The general formula is:
+
+$$
+\sigma^2 = Var(X) = \sum (x - \mu)^2 P(X=x)
+$$
+
+While the binomial simplified formula is:
+
+$$
+\sigma^2 = Var(Binom(n,p)) = n*p*(1-p)
+$$
+
+### In R: dbinom, pbinom, qbinom, and rbinom
+
+Furthermore, knowing a random variable follows a common distribution allows for quick computation of probabilities through R commands.
+
+The suite of commands ```d<dist>```, ```p<dist>```, ```q<dist>```, and ```r<dist>``` work exactly the same for all the distributions R can handle; here <dist> is an abbreviation for the distribution's name; e.g. 'binom' for 'binomial', 'norm' for 'normal', just 't' for the t distribution, et cetera.
+
+I provide binomial examples below, but these principles hold for any distribution.
+
+##### dbinom
+
+```dbinom(x, size, prob)``` returns the probability of getting EXACTLY $x$ successes from $size$ trials, each with success probability $prob$.
+
+e.g. What is the probability of getting EXACTLY 55 heads from 100 coin flips?
+
+```{r}
+dbinom(55, 100, 0.5)
+```
+
+##### pbinom
+
+```pbinom(q, size, prob)``` gives us the probability of getting $q$ OR FEWER successes from $size$ trials with probability of success $prob$.
+
+e.g. what is the probability I get 55 OR FEWER heads from 100 coin flips?
+
+```{r}
+pbinom(55, 100, 0.5)
+```
+
+##### qbinom
+
+```qbinom(p, size, prob)``` tells us at what value of the random variable there is $p$% chance of getting an equal or lower value.
+
+(It is the reverse of pbinom.)
+
+e.g. There is a 95% chance of getting less than or equal to how many heads?
+
+```{r}
+qbinom(0.95, 100, 0.5)
+```
+
+##### rbinom
+
+```rbinom(n, size, prob)``` is unrelated to probability generation. This command generates $n$ random values from $Binom(size, prob)$.
+
+e.g. One 'experiment' consists of flipping a coin 5 times and counting the number of heads one obtains. Run this experiment 20 times.
+
+```{r}
+rbinom(20, 5, 0.5)
+# note; these values are not themselves coin flips! each value comes from flipping a coin 5 times and counting the heads.
+```
+
+### Summary
+
+![This image may not display if you do not have ProbabilityDemonstration.png saved next to this file.](ProbabilityDemonstration.png)
+
+```{r eval=FALSE, include=FALSE}
+
+# produces plot which I then annotated in google drsawings :)
+
+gbinom(100, 0.5, size = 3) +
+  geom_binom_density(100, 0.5, b = 55, color = "red", size = 3) +
+  geom_binom_density(100, 0.5, a = 55, b = 55, color = "black", size = 3) +
+  theme_classic() +
+  scale_y_continuous(expand = c(0,0))
+```
+
+Note; in this table (and all of statistics) the capital $X$ refers to a random variable, and the lowercase x refers to a number, usually specified by the user.
+
++---------------+-----------------+---------------------------------------+
+| Command       | In              | Out                                   |
++===============+=================+=======================================+
+| ```d<dist>``` | A value, x      | $P(X = x)$                            |
++---------------+-----------------+---------------------------------------+
+| ```p<dist>``` | A value, q      | $P(X <= q)$                           |
++---------------+-----------------+---------------------------------------+
+| ```q<dist>``` | A probability, p| $x$, such that $P(X <= x) = p$        |
++---------------+-----------------+---------------------------------------+
+
+
+### Extra Content: The Binomial Distribution Basics
+
+(too much content to go over in discussion... but wanted to leave this available to students!)
+
+**Recall: What is a random variable?**
+A random variable is a number which could take on a new value every time we run an experiment.
+
+When we know certain things about the way a random variable is generated, we can assign probabilities to the different possible values that random variable might take on. The probabilities of the different values make up the **distribution** of the random variable.
+
+One common example is the binomial distribution, which arises when our random variable is the number of "successes" from trials with:
+
++ *Binary outcomes*: A single trial either fails or succeeds.
++ *Independence*: Trials do not affect each other.
++ *Number of trials fixed*: The number of trials is pre-determined.
++ *Success probability fixed*: Each trial has the same probability of succeeding.
+
+For example; I know that if I flip a coin, I have a 50% chance of getting heads and a 50% chance of getting tails. Flip a fair coin twice; let $X$ be the number of heads I get. Because $X$ is the number of successes of a fixed number of independent trials, we know that $X$ follows the *"binomial distribution"*. With this knowledge, we can calculate how likely each possible value of $X$ is. There is a 1/4 chance I'll get 0 heads, 1/2 chance I'll get 1 head, and a 1/4 chance I'll get 2 heads.
+
+```{r}
+gbinom(n=2, p=0.5, size=3) +
+    theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22,face="bold"))
+```
+
+These probabilities are easily computed by hand, but what if I flip a fair coin 100 times? Knowing it follows the binomial distribution allows us to quickly produce all of the probabilities to the values which $X$ can take on.
+
+```{r}
+gbinom(n=100, p=0.5, size=3) +
+    theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22,face="bold"))
+```
+
+Also, as above, knowing the variable follows the binomial distribution allows for quick calculation of its average, variance, and any probability you want.
