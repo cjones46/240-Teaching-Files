@@ -1,0 +1,102 @@
+---
+title: "Discussion 8 - Demo"
+author: "Cameron Jones"
+date: 'Week of April 3'
+output: html_document
+---
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Concept Review
+
+### Binomial vs. Normal
+
+The binomial distribution is *discrete* ; it counts the number of successful trials, so it must be a non-negative integer. Recall the BINS acronym from lecture and last discussion for identifying binomial random variables.
+
+```{r}
+gbinom(10, 0.5, size = 2) +
+  geom_binom_density(10, 0.5, a = 4, b = 4, color = "red", size = 2)
+```
+
+The probability that a binomial variable takes on an exact value is known and easily calculable; we have the closed mathematical formula for this, but all you need to know is that it is calculable with `dbinom(x, n, p)`.
+
+```{r}
+dbinom(4, 10, 0.5) # The height of the red bar above; this is P(X = 2), where X ~ Binom(5, 0.6)
+```
+
+**$P(X <= x)$ and $P(X < x)$ are DIFFERENT in the binomial distribution, by the value of $P(X=x)$.**
+
+The normal distribution is *continuous*; it can take on any value in a range, not just limited to whole or positive numbers.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_segment(aes(x = 4, xend = 4, y = 0, yend = dnorm(4, mean = 5, sd = 2)), color = "red", size = 2)
+```
+
+The probability that a *normal* variable takes on a specific value is *arbitrary*, because it is continuous. The probability you get EXACTLY a certain value from a continuous distribution is effectively 0.
+
+Attempting to calculate this with `dnorm` refers to the height of the density function at a specific point.
+
+```{r}
+dnorm(4, mean = 5, sd = 2) # The height of the red bar above; NOT P(X = 4)
+```
+
+```{r}
+rnorm(100, 5, 2) 
+
+# Notice how none of these random values are exactly 4, even though "dnorm tells us" around 18% of them should be
+sum(rnorm(100, 5, 2) == 4)
+```
+
+**$P(X <= x)$ and $P(X < x)$ are the SAME for a normal distribution, because $P(X = x)$ is 0.**
+
+Where as the probability of specific points has little meaning, *area* under the normal curve does have real meaning.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_norm_fill(5, 2, b = 4, fill = "red")
+```
+
+```{r}
+pnorm(4, 5, 2) #The red area above; this is equivalent to P(X <= 4)!
+```
+
+### Framing Inference Questions
+
+The statistical inference process begins with a hypothesis, a theory about the population. Using inference allows us to look at sample data which we have observed and make conclusions about the population from which that sample came.
+
+It is important, especially as you start your project proposals, to be rigorous with this question. It should be about the *value of a parameter in the population/model*. To understand this, you must have a good grasp on what your population is, and what your data generating model is. 
+
+**Examples of invalid inference questions:**
+
+-   Who is the best shooter in the Premier League?
+-   What predicts the COVID death rate of a country?
+    -   These are not about a specific value. They are too vague and need to be restructured to be a question about a specific parameter.
+-   Which Premier League team scored the most goals this season?
+-   Do EU countries have greater populations than non-EU countries?
+    -   While these are about a specific value, they are not about the population; they are about the sample and can be *easily measured, there is no need for statistics*. These are too specific, and need to be restructured to be about the population.
+
+**Examples of valid inference questions:**
+
+-   Is there evidence that the home team wins NFL games more often than they randomly would?
+    -   Population: A hypothetical infinite set of NFL games
+    -   Example sample: This season's games
+    -   Model: $X \sim Bernoulli(p)$, where $X$ is an indicator variable (1 or 0) for if the home team wins a given NFL game and $p$ is the true probability that the home team wins an NFL game.
+    -   Parameter of interest: $p$ (is it 0.5?)
+-   Is there evidence for a difference in height between freshmen and non-freshmen across UW-Madison?
+    -   Population: All UW-Madison students
+    -   Example sample: The students in this room
+    -   Model: $X_1 \sim N(\mu_1, \sigma_1), X_2 \sim N(\mu_2, \sigma_2)$, where $X_1$ is the height of a freshman and $X_2$ is the height of a non-freshman
+    -   Parameter of interest: $\mu_1 - \mu_2$ (is it 0?)
+
+*Note: We have not learned linear regression yet, but I provide an example here if you want to take this route.*
+
+-   Does latitude have an average effect on average yearly temperature?
+    -   Population: All possible latitudes on the Earth
+    -   Example sample: latitude and average yearly temperature of global countries
+    -   Model: $Y = \beta_0 + \beta_1 * X$, where $Y$ is average yearly temperature, $\beta_0$ is the intercept of the best fit line, $\beta_1$ is the effect on $Y$ of increasing $X$ by 1, and $X$ is latitude.
+    -   Parameter of interest: $\beta_1$ (is it 0?)
