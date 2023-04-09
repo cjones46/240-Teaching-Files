@@ -1,0 +1,94 @@
+---
+title: "Discussion 9 - Demo"
+author: "Cameron Jones"
+date: "Week of April 10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../../scripts/ggprob.R")
+```
+
+# Concept Review
+
+### Calculating a Confidence Interval: Difference in Proportions
+
+We are interested in THE DIFFERENCE between some $p_1$ and $p_2$ in the population. We do not care about the individual values $p_1$ and $p_2$ necessarily; we care about whether or not their difference is 0.
+
+**Question:** Is there evidence for a difference in the true chance for a Wisconsin basketball player ($p_1$) and a Marquette player ($p_2$) to make a free throw? (2022-23) 
+
+**Data:**
+Wisconsin made 287 of 428 (67.1%) free throws this season.
+Marquette made 422 of 588 (71.8%) free throws this season.
+
+Note: the difference in the sample is not that large... but we have a relatively large amount of data. Is there evidence for a difference in $p_1$ and $p_2$?
+
+\[H_0: p_1 - p_2 = 0\]
+\[H_A: p_1 - p_2 \neq 0\]
+
+Equivalently: $p_1 = p_2$, $p_1 \neq p_2$, and while this is easier for interpretation it loses sight of the fact we are not interested in $p_1$ and $p_2$ explicitly, just their difference.
+
+```{r}
+
+# Enter raw data
+x1 = 287
+n1 = 428
+
+x2 = 422
+n2 = 588
+
+# Make the Agresti-Couli adjustment for two proportions (not a necessary part of inference, just boosts your power a little bit)
+# Add a success and failure (two observations, one success) to each group
+ntilde1 = n1 + 2
+ntilde2 = n2 + 2
+
+# Additional success from A-C adjustment
+ptilde1 = (x1+1)/ntilde1
+ptilde2 = (x2+1)/ntilde2
+
+
+estimate = ptilde1 - ptilde2
+
+# SLIGHT ADJUSTMENT from lecture notes: using combined p for calculation of standard error
+p_bar = (x1+x2)/(n1+n2)
+
+# Why do we call this the standard ERROR, rather than the standard DEVIATION? We reserve the term standard error to refer to the randomness inherent in a computable-from-the-sample-data STATISTIC like p_hat1-p_hat2, or the sample mean. These have "error" in predicting the true parameter; whereas random sample data is expected to deviate from the average.
+se1 = sqrt( p_bar*(1-p_bar)/ntilde1 )
+se2 = sqrt( p_bar*(1-p_bar)/ntilde2 )
+se = sqrt(se1^2 + se2^2 )
+
+# Why 0.975 if our confidence level is 95%? We want to partition 95% out of the CENTER of the standard normal distribution; this means 97.5% is to the left of the right edge of that area
+# Also note: 0 and 1 are the defaults, so we often omit them. I include here just for clarity.
+z = qnorm(0.975, mean = 0, sd = 1)
+
+# Why z*se? SE is the standard error of the distribution of p_hat1 - p_hat2. z is the number of standard deviations away from the mean one needs to cut out to get 95% of the data, because it comes from N(0,1). So z*se is the distance one needs to go on the distribution of p_hat1 - p_hat2 to get 95% of THAT data.
+
+low = estimate - z*se
+high = estimate + z*se
+ci = c(low, high)
+ci
+```
+
+### Interpreting a Confidence Interval/P-Value
+
+> We are 95% confident that the true value of $p_1-p_2$ is between -0.104 and 0.010.
+
+Because the 95% confidence interval CONTAINS the hypothesized null value of 0, this does NOT constitute significant evidence for a difference in the two true proportions.
+
+_If, instead, our confidence interval had NOT contained 0, i.e. [-0.124, -0.01], we would say that we have evidence at $\alpha = 0.05 = 1-0.95$ for a difference in $p_1$ and $p_2$._
+
+Crucially, we have NOT proven that the null hypothesis is true. We have FAILED to DISPROVE it.
+
+**Analogy:** You are wondering if your roommate is still home. $H_0$: Roommate is not at home. $H_A$: Roommate is still home.
+
+You check the kitchen ("run the experiment"), and roommate is not there ("not a significant finding").
+
+There is a lack of evidence for $H_A$ (roomie at home), but this is not necessarily proof of $H_0$. 
+
+
+
+
+
+
+
