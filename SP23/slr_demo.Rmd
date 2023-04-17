@@ -1,0 +1,70 @@
+---
+title: "Simple Linear Regression in R"
+author: "Ryan Yee"
+date: "2023-04-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Libraries
+
+```{r}
+library(tidyverse)
+```
+
+## Dataset
+
+We will use the built-in `iris` dataset which has 5 variables
+
+```{r}
+data("iris")
+head(iris)
+```
+
+## SLR Model
+
+We will fit a simipl linear regression in the following form:
+
+$$ \text{Sepal.Width} = \text{Sepal.Length} * \beta + \alpha$$
+
+where $\beta$ is our slope term and $\alpha$ is our constant or intercept term.
+Note we are trying to predict Sepal Width from Sepal Length.
+
+```{r}
+slr <- lm(Sepal.Width ~ Sepal.Length, data = iris)
+slr
+```
+
+Our estimates are $\beta = -0.06188$ and $\alpha = 3.41895$
+
+## Model Summary
+
+We can view a more useful summary using the `summary` function.
+
+```{r}
+summary(slr)
+```
+
+## Diagnostic Plots
+
+We will need to look at diagnostic plots to justify the assumptions of our model are met. (This may or may not be discussed in lecture, so I will not go into details on how to assess the assumptions here).
+
+```{r}
+plot(slr)
+```
+
+## Visualize Model
+
+We can visualize the model using `ggplot`.
+
+```{r}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+
+
