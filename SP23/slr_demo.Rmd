@@ -15,13 +15,12 @@ library(tidyverse)
 
 ## Dataset
 
-We will use FiveThirtyEight's Soccer Power Index dataset.
-I am taking the first 1000 observations, there are over 11,000 observations in the full dataset (this will make it easier to visualize).
-There are two key variables: `spi` which rates a team's strength and `xg` which is the number of goals we would expect a team to score in a game given the shots they took.
+We will use FiveThirtyEight's Soccer Power Index dataset. I am taking the first 1000 observations, there are over 11,000 observations in the full dataset (this will make it easier to visualize). There are two key variables: `spi` which rates a team's strength and `xg` which is the number of goals we would expect a team to score in a game given the shots they took.
 
 ```{r, include=FALSE}
 spi <- read.csv("../../../../projects/soccer/spi_matches_latest.csv") %>%
   select(spi1, spi2, xg1, xg2) %>%
+  drop_na() %>%
   head(1000)
 ```
 
@@ -33,15 +32,7 @@ head(spi)
 dim(spi)
 ```
 
-
-## SLR Model
-
-We will fit a simiple linear regression in the following form:
-
-$$ \text{xG Difference} = \text{SPI Difference} * \beta + \alpha$$
-
-where $\beta$ is our slope term and $\alpha$ is our constant or intercept term.
-Note we are trying to predict the difference in expected goals from the difference in SPI or team strength.
+We will be interested in predicting the difference in expected goals (`xg`) based on the difference in team strength (`spi`).
 
 ```{r}
 spi <- spi %>%
@@ -50,16 +41,32 @@ spi <- spi %>%
     spi_diff = spi1 - spi2
   )
 
+spi %>%
+  ggplot(aes(x = xg_diff, y = spi_diff)) +
+  geom_point()
+```
+
+
+## SLR Model
+
+We will fit a simiple linear regression in the following form:
+
+$$ \text{xG Difference} = \text{SPI Difference} * \beta + \alpha$$
+
+where $\beta$ is our slope term and $\alpha$ is our constant or intercept term. Note we are trying to predict the difference in expected goals from the difference in SPI or team strength.
+
+```{r}
+
+
 slr <- lm(xg_diff ~ spi_diff, data = spi)
 slr
 ```
 
-Our estimates are $\hat{\beta} = 0.04013$ and $\hat{\alpha} = 0.30159$
+Our estimates are $\hat{\beta} = 0.03699$ and $\hat{\alpha} = 0.30909$
 
 ## Model Summary
 
-We can view a more useful summary using the `summary` function.
-This is useful for the interpretation portion of the analysis.
+We can view a more useful summary using the `summary` function. This is useful for the interpretation portion of the analysis.
 
 ```{r}
 summary(slr)
@@ -82,6 +89,3 @@ ggplot(spi, aes(x = spi_diff, y = xg_diff)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE)
 ```
-
-
-
