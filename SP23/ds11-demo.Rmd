@@ -87,8 +87,6 @@ This should make you go... really?
 
 Remember the scatter plot at the beginning of this file? Jabba the Hutt, a large outlier, has an extreme effect on our linear model!
 
-The red line is the linear regression line calculated with Jabba the Hutt in the data... and the blue line is without! The blue line is a much better fit for the data.
-
 ```{r, warning = FALSE, message = FALSE, fig.height = 5, fig.width = 7, echo = FALSE}
 ggplot(starwars %>% filter(!str_detect(name, "Jabba")), aes(x = height, y = mass, label = name)) +
   geom_point() + 
@@ -96,9 +94,11 @@ ggplot(starwars %>% filter(!str_detect(name, "Jabba")), aes(x = height, y = mass
   geom_smooth(data = starwars, method = "lm", se = F, color = "#EF0107") + # Uses full starwars dataset
   geom_smooth(method = "lm", se = F, color = "#6CABDD") + # Uses default from ggplot() call at top, without Jabba
   
-  ggtitle("Linear Regression <span style='color: #6CABDD;'>With</span> and <span style='color: #EF0107;'>Without</span> Jabba the Hutt") +
+  ggtitle("Linear Regression <span style='color: #EF0107;'>With</span> and <span style='color: #6CABDD;'>Without</span> Jabba the Hutt") +
   theme(plot.title = element_markdown())
 ```
+
+Notice that Jabba's inclusion drags the line far from that central cluster of points, making the linear model a much worse fit for the data. Conversely, removing him allows the model to be a great fit for the data.
 
 Re-running the linear model without Jabba the Hutt,
 
