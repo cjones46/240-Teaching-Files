@@ -91,14 +91,12 @@ Remember the scatter plot at the beginning of this file? Jabba the Hutt, a large
 ggplot(starwars %>% filter(!str_detect(name, "Jabba")), aes(x = height, y = mass, label = name)) +
   geom_point() + 
   geom_text_repel() + 
-  geom_smooth(data = starwars, method = "lm", se = F, color = "#EF0107") + # Uses full starwars dataset
-  geom_smooth(method = "lm", se = F, color = "#6CABDD") + # Uses default from ggplot() call at top, without Jabba
-  
+  geom_abline(slope = estimate, intercept = 171.285, method = "lm", se = F, color = "#EF0107") + # Using slope and intercept from above
+  geom_smooth(method = "lm", se = F, color = "#6CABDD") +
   ggtitle("Linear Regression <span style='color: #EF0107;'>With</span> and <span style='color: #6CABDD;'>Without</span> Jabba the Hutt") +
-  theme(plot.title = element_markdown())
+  theme(plot.title = element_markdown()) +
+  ylim(c(0, 200))
 ```
-
-Notice that Jabba's inclusion drags the line far from that central cluster of points, making the linear model a much worse fit for the data. Conversely, removing him allows the model to be a great fit for the data.
 
 Re-running the linear model without Jabba the Hutt,
 
