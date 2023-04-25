@@ -63,15 +63,15 @@ Using theory, inference on $\beta_1$ is more involved and is gone over in detail
 The command ```lm(outcome ~ input1 + input2 + ..., data)``` does all this for you, and inference results can be extracted by running ```summary()``` on the model object.
 
 ```{r}
-model = lm(height ~ mass, starwars)
+model = lm(mass ~ height, starwars)
 
 # running just summary(model) gives you a ton of information, I reduce it to just the relevant info with $coefficients
 summary(model)$coefficients
 ```
 ```{r}
 # The algebraic forms of these values are covered in lecture, they are complex
-estimate = 0.02807
-se = 0.02752
+estimate = 0.638571
+se = 0.6260583
 n = 59 # you can check this with starwars %>% drop_na(height, mass) %>% count()
 
 # But, using them, we can recreate the t-value and p-value from lm
@@ -91,7 +91,7 @@ Remember the scatter plot at the beginning of this file? Jabba the Hutt, a large
 ggplot(starwars %>% filter(!str_detect(name, "Jabba")), aes(x = height, y = mass, label = name)) +
   geom_point() + 
   geom_text_repel() + 
-  geom_abline(slope = estimate, intercept = 171.285, method = "lm", se = F, color = "#EF0107") + # Using slope and intercept from above
+  geom_abline(slope = estimate, intercept = -13.810314, method = "lm", se = F, color = "#EF0107") + # Using slope and intercept from above
   geom_smooth(method = "lm", se = F, color = "#6CABDD") +
   ggtitle("Linear Regression <span style='color: #EF0107;'>With</span> and <span style='color: #6CABDD;'>Without</span> Jabba the Hutt") +
   theme(plot.title = element_markdown()) +
@@ -101,7 +101,7 @@ ggplot(starwars %>% filter(!str_detect(name, "Jabba")), aes(x = height, y = mass
 Re-running the linear model without Jabba the Hutt,
 
 ```{r}
-summary(lm(height ~ mass, starwars %>% filter(!str_detect(name, "Jabba"))))$coefficients
+summary(lm(mass ~ height, starwars %>% filter(!str_detect(name, "Jabba"))))$coefficients
 ```
 
 We find extremely strong evidence that among non-Jabba Star Wars characters, mass is a positive predictor of height.
