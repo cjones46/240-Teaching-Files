@@ -1,0 +1,153 @@
+---
+title: "Interpreting Linear Regression Residual Plots"
+author: "Ryan Yee"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, error = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(modelr)
+```
+
+# Introduction
+
+We often refer to residual plots to check that our assumptions are reasonable when performing linear regression.
+We will demonstrate what residuals look like when these assumptions are not met.
+
+## Define Plotting Functions
+
+```{r}
+plot_lm = function(data) {
+  return(
+    data %>%
+      ggplot(aes(x, y)) +
+      geom_point() +
+      geom_smooth(method = "lm", se = FALSE, formula = "y ~ x")
+  )
+}
+
+plot_resid = function(data) {
+  return(
+    data %>%
+      ggplot(aes(x, resid)) +
+      geom_point() +
+      geom_hline(yintercept = 0, color = "red", linetype = "dashed")
+  )
+}
+```
+
+
+# Equal Variance
+
+Let's create some data where the equal variance assumption is violated.
+
+```{r}
+# draw x's uniformally over interval [0, 10]
+x = runif(100, min = 0, max = 10)
+
+# assign y's as linear function of x's with some noise that depends on the value of x
+y = x + x*rnorm(100)
+
+uneq_var = tibble(x, y)
+plot_lm(uneq_var)
+```
+
+Now, we fit a linear model with this data and look at the residuals.
+
+```{r}
+uneq_var_lm = lm(y ~ x, data = uneq_var)
+
+uneq_var %>%
+  add_residuals(uneq_var_lm) %>%
+  plot_resid()
+```
+
+We can clearly see that the residuals around $x=0$ are much less dispersed than the residuals around $x=10$.
+When the equal variance assumption is violated, we typically see a "funnel" shape to the residuals.
+
+# Normal Error
+
+Let's create some data where the normal error assumption is violated.
+
+```{r}
+# we will use the same x's as before
+
+# assign y's as linear function of x's with uniform error
+y = x + runif(100, min = -5, max = 5)
+
+unif_err = tibble(x, y)
+plot_lm(unif_err)
+```
+
+Now, we fit a linear model with this data and look at the residuals.
+
+```{r}
+unif_err_lm = lm(y ~ x, data = unif_err)
+
+unif_err %>%
+  add_residuals(unif_err_lm) %>%
+  plot_resid()
+```
+
+This is what the error looks like with uniform error.
+Let's also look at a more extreme example where we either have error 1 or -1.
+
+```{r}
+# use the same x's as before
+
+# assign y's as linear function of x's with error of -1 or 1
+y = x + rbinom(10, 1, .5) * 2 -1
+
+binom_err = tibble(x, y)
+plot_lm(binom_err)
+```
+
+```{r}
+binom_err_lm = lm(y ~ x, data = binom_err)
+
+binom_err %>%
+  add_residuals(binom_err_lm) %>%
+  plot_resid()
+```
+
+Now we can see the error is definitely not normally distributed.
+If it were, there would be more observations close to 0.
+
+# Independence
+
+It is not always possible to determine if the independence assumption isn't met by looking at residual plots.
+However, we will show one example where we can.
+
+```{r}
+# create some normal error
+error = rnorm(100)
+
+# create data frame where we add normal error to x's
+add_error = tibble(x, y = x + error)
+
+# create data frame where we subtract normal error to x's
+subtract_error = tibble(x, y = x - error)
+
+# combine these data frames. Note that we used each x twice so we do not have independent observations
+dependent = bind_rows(add_error, subtract_error)
+plot_lm(dependent)
+```
+
+Now let's look at the residuals.
+
+```{r}
+dependent_lm = lm(y ~ x, data = dependent)
+
+dependent %>%
+  add_residuals(dependent_lm) %>%
+  plot_resid()
+```
+
+Note that the error is symmetrical about zero.
+
+
+
