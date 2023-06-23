@@ -1,0 +1,176 @@
+---
+title: "Inference"
+author: "Cameron Jones"
+date: "Stat 240: Summer 2023"
+output: html_document
+---
+
+_Disclaimer: This material was presented briefly at in-person discussions as a brief recap of the week's concepts during the Spring '23 iteration of Stat 240. It is not a comprehensive list on everything you need to know for this topic._
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+PlantGrowth = PlantGrowth %>% filter(group != "trt2")
+```
+
+# Concept Review
+
+##### Data: Plant Growth by Treatment
+
+20 plants, 10 in control and 10 in treatment 1. We consider these two sets of 10 to be samples from the hypothetical populations where all plants were given control/treatment.
+
+We are interested in the means of those two populations.
+
+```{r}
+PlantGrowth[9:12,]
+```
+
+
+### Single Mean Inference/Confidence Interval
+
+Is the mean weight of the population of control plants equal to 5?
+
+**Model**
+
+$$
+Y_i \sim F(\mu, \sigma)
+$$
+
+We assert that each control plant's weight, $Y_i$, comes from some unimportant distribution $F$ (doesn't have to be normal, by the Central Limit Theorem) which has mean $\mu$ and standard deviation $\sigma$. Again, we are interested in $\mu$.
+
+**Hypotheses**
+
+$$
+H_0: \mu = 5
+$$
+
+$$
+H_A: \mu \neq 5
+$$
+
+**Test Statistic**
+
+As we said above, the individual $Y_i$ plant weights follow some unknown distribution. However, usefully, we know by the central limit theorem that the sample mean $\bar{Y}$ has the distribution:
+
+$$
+\bar{Y} \sim Normal(\mu, \frac{\sigma}{\sqrt{n}})
+$$
+
+This can be rewritten as:
+
+$$
+\frac{\bar{Y}-\mu}{\sigma/\sqrt{n}} \sim Normal(0, 1)
+$$
+
+Where n is the size of our sample (10 here).
+
+This would be really nice... if we knew $\sigma$. We don't know $\sigma$. We can estimate $\sigma$ with $\hat{\sigma}$, the sample standard deviation. If we replace $\sigma$ with $\hat{\sigma}$ in the formula, the distribution is no longer normal, but something slightly more random called a t distribution.
+
+$$
+\frac{\bar{Y}-\mu}{\hat{\sigma}/\sqrt{n}} \sim t(n-1)
+$$
+
+A couple notes on the t distribution:
+
+  - Unlike Binomial and Normal, it has just one parameter: the "degrees of freedom", n-1 here
+  - It is very similar to the standard normal distribution, especially for large n; see lecture example
+  
+**Sampling Distribution**
+
+Under the null hypothesis which states that $\mu = 5$,
+
+$$
+\frac{\bar{Y}-5}{\hat{\sigma}/\sqrt{n}} \sim t(n-1)
+$$
+
+We could approximate this with, $\bar{Y} \sim Normal(5, \frac{\sigma}{\sqrt{n}})$, but this approximation is especially tenuous because of our small sample size (n=10).
+
+**Outcomes**
+
+We observe the sample mean and standard deviation:
+
+```{r}
+PlantGrowth %>% filter(group == "ctrl") %>% summarize(sampleMean = mean(weight), sampleSD = sd(weight))
+```
+
+Our alternative hypothesis is two-sided, so anything as far or further from the null value of 5 constitutes evidence against the null. Therefore, any value of the sample mean outside the range [4.968, 5.032] is evidence.
+
+From the sampling distribution, which is $t(n-1) = t(10-1) = t(9)$, this is any value outside the range [$\frac{4.968-5}{0.58/\sqrt{10}}, \frac{5.032-5}{0.58/\sqrt{10}}$].
+
+```{r, warning = FALSE}
+gt(df = 9) +
+  geom_t_fill(df = 9, b = (4.968-5)/(0.58/sqrt(10)), color = "red") +
+  geom_t_fill(df = 9, a = (5.032-5)/(0.58/sqrt(10)), color = "red") +
+  xlim(-3, 3)
+```
+
+
+**p-value**
+
+Just like pnorm and pbinom, pt returns $P(X \leq q)$, where $X \sim t(df)$, and you only have to specify q and df.
+
+```{r}
+sampleMean = 5.032
+sampleSD = 0.583
+n = 10
+
+StdError = sampleSD/sqrt(n)
+
+# That complicated formula for leftPoint is just getting the equidistant point, 4.968, then subtracting that from 5. You can hard code it if you want.
+
+# If you are adapting this code to another problem; make sure you know whether your observed sample mean is right or left of the null value!
+
+leftPoint = ((5-(sampleMean-5))-5)/StdError
+rightPoint = (sampleMean - 5)/StdError
+
+# area left of range + area right of range
+pt(leftPoint, df = n-1) + (1 - pt(rightPoint, df = n-1))
+```
+
+What would've happened if we incorrectly stuck with the normal distribution approximation?
+
+```{r}
+pnorm(4.968, mean = 5, sd = StdError) + (1-pnorm(5.032, mean = 5, sd = StdError))
+```
+
+Not much. The use of the t distribution is technically correct, but because the t distribution and the normal distribution are so similar they will almost always give you very similar answers.
+
+**Confidence Interval**
+
+Our formula for a confidence interval is:
+
+$$
+(\text{Point Estimate of } \mu) \pm (\text{Quantile Score})(\text{Std. Error})
+$$
+
+Our point estimate of $\mu$ is $\bar{Y} = 5.032$.
+
+I refer to the quantity before the Std. Error as the "Quantile Score". It is really the number of standard deviations away from the mean on the SAMPLING DISTRIBUTION one needs to go to capture the confidence level. (Ask me if that sentence doesn't make sense!) We have often been referring to this as a Z score, because for the difference in proportions, it was coming from the standard normal (Z) distribution. Now, it is coming from the t(n-1) distribution.
+
+We calculate the standard error above; $SE(\bar{Y}) = \hat{\sigma}/\sqrt{n}$.
+
+```{r}
+q_score = qt(0.975, df = 9) # This is 2.26; not 1.96! 
+
+sampleMean - q_score * StdError
+sampleMean + q_score * StdError
+```
+
+Again, what if we had stuck with the normal approximation?
+
+```{r}
+q_score = qnorm(0.975) # This is the 1.96 number you're used to
+
+sampleMean - q_score * StdError
+sampleMean + q_score * StdError
+```
+
+We can verify our p-value and confidence interval with the t.test function.
+
+```{r}
+# verify with t.test
+data = PlantGrowth %>% filter(group == "ctrl") %>% pull(weight)
+t.test(data, mu = 5)
+```
+

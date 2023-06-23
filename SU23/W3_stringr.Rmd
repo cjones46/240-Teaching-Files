@@ -1,0 +1,111 @@
+---
+title: "stringr"
+author: "Cameron Jones"
+date: 'Stat 240: Summer 2023'
+output: html_document
+---
+
+_Disclaimer: This material was presented briefly at in-person discussions as a brief recap of the week's concepts during the Spring '23 iteration of Stat 240. It is not a comprehensive list on everything you need to know for this topic._
+
+#### Regular Expression Resources
+
+- https://evoldyn.gitlab.io/evomics-2018/ref-sheets/R_strings.pdf
+- regex101.com
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+# Concept Review: Stringr
+
+### Data: Fruit Strings
+
+```{r}
+head(fruit) # fruit is one of stringr's built in lists! It contains 80 strings with the names of fruits.
+```
+
+## Concept: The "detection" str_functions, str_detect & str_count
+
+These commands *detect* or *count* occurrences of a given pattern. They don't return strings, they return TRUE/FALSE and a number, respectively.
+
+#### str_detect
+
+```{r, error = TRUE}
+#str_detect(string(s) to check, pattern to check for)
+
+str_detect("blueberry", "berry") # TRUE because blueberry contains berry
+
+str_detect(c("blueberry", "orange"), "berry") # TRUE, FALSE; it operates on EACH word, returning a TRUE or FALSE for each word if you pass in a list
+
+str_detect(fruit, "berry") %>% sum() # Recall; the sum of a TRUE/FALSE list is the number of TRUEs! 14 of the 80 fruits in 'fruit' have the word "berry" in them.
+```
+
+#### str_count
+
+```{r}
+#str_count(string(s) to check, pattern to check for)
+
+str_count("blueberry", "b") # Returns 2 because there are 2 b's in "blueberry"
+
+str_count(c("blueberry", "orange"), "b") # Returns a list, (2, 0)
+
+str_count(fruit, "an") %>% max() # One of our fruits has the pattern "an" twice; which fruit?
+```
+
+## Concept: The "extraction" str_functions, str_sub & str_extract
+
+These commands "extract" certain parts of strings; i.e. the first three letters of a string, or the part of a string which follows a particular pattern. They return STRINGS.
+
+#### str_sub
+
+```{r}
+
+#str_sub(string(s) to check, start position, end position)
+# Think of it as standing for "subsection"
+
+str_sub("blueberry", 2, 3) # The second character to fourth character (inclusive) in the string
+str_sub("blueberry", 5, 5) # The fifth character alone
+str_sub(c("blueberry", "orange"), 4, -2) # The fourth to second-last character in the strings
+
+```
+
+#### str_extract
+
+```{r}
+
+#str_extract(string(s) to check, pattern to extract)
+
+str_extract("blueberry", "berry") # Returns "berry" as the part of "blueberry" which matches the pattern
+str_extract(c("blueberry", "orange"), "berry") # Returns (berry, NA) as the parts of each string which match the pattern
+
+# This command is much more useful with regular expressions: see below
+
+```
+
+
+## Concept: Regular Expressions
+
+How do I detect or extract a *complex* pattern, such as "at the very beginning of the string, a vowel followed by a consonant?"
+
+We use the above commands in addition to a *regular expression*, which is a language which exists within most programming languages that allows for the concise and systematic specification of complex string patterns.
+
+How many fruits START with a vowel, then a consonant?
+
+```{r}
+small = head(fruit)
+small
+
+str_detect(small, "^[aeiou][^aeiou]") # ^ refers to the beginning of the string, [aeiou] matches a character in the set {a, e, i, o, u}, and [^aeiou] matches a character NOT in the set {a, e, i, o, u}
+
+str_extract(small, "^[aeiou][^aeiou]") # Again, recall the difference between count and extract
+
+
+str_detect(fruit, "^[aeiou][^aeiou]") %>% sum() # 8 fruits start with a vowel and then a consonant.
+
+# Which ones?
+
+as_tibble(fruit) %>% filter(str_detect(fruit, "^[aeiou][^aeiou]")) # Recall that str_detect returns a list of TRUEs and FALSEs that we can pass into filter! (though filter only works on dataframes/tibbles, not a single list like fruit is)
+```
+
+
+
