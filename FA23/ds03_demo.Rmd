@@ -1,0 +1,81 @@
+---
+title: "Discussion 3"
+author: "Cameron Jones"
+date: 'Week of September 25'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+# Concept Review: dplyr
+
+#### Data: String Tension
+
+The built-in tidyverse dataframe ```warpbreaks``` contains data on how many breaks appeared in a set length of yarn when exposed to a certain amount of tension.
+
+```{r}
+slice_sample(warpbreaks, n = 8)
+```
+
+## Concept: The Pipe (%>%) Operator
+
+(helpful tip: keyboard shortcut for the pipe)
+
+* Windows: ctrl+shift+M
+* Mac: command+shift+M
+
+```{r}
+# What it does: Just passes the object on the left into the function on the "right" as the first argument
+x = c(3, 4, 5, NA)
+
+# These two lines of code are exactly equivalent
+mean(x, na.rm = T)
+x %>% mean(na.rm = T) # na.rm = T here is the SECOND argument, x is the first.
+```
+
+```{r}
+# Why does it exist? Motivation: Making your dplyr work flow easier to read and produce!
+
+# These two groups of code are exactly equivalent; dplyr commands take a dataframe in as the first argument and spit a dataframe out, so they can be connected with the pipe
+warpbreaks %>% 
+  group_by(tension) %>% 
+  summarize(avgBreaks = mean(breaks)) %>% 
+  arrange(desc(avgBreaks)) %>% 
+  mutate(rank = row_number())
+
+# Everything you can do with the pipe, you can do without it... but it's ugly and difficult to write
+mutate(arrange(summarize(group_by(warpbreaks, tension), avgBreaks = mean(breaks)), desc(avgBreaks)), rank = row_number())
+```
+
+# Concept: Creating Summary Tables with group_by() and summarize()
+
+group_by() and summarize() work together to reduce a dataframe of many rows down to a small dataframe which contains summary measures.
+
+```{r, message = FALSE}
+# group_by alone just adds an "instruction" to the dataframe that future mutates, summarizes, slices, etc. should use these groups, does not edit the dataframe at all. Notice that Groups: wool [2] has been added to the below output.
+warpbreaks %>% 
+  group_by(wool)
+
+# Summarize alone, with no groups, just returns a single-row summary of the entire dataframe
+# Note the syntax within summarize: newColumnName = formula(existingColumns), newColumn2 = formula(existingColumns)
+warpbreaks %>% 
+  summarize(avgBreaks = mean(breaks),
+            sdBreaks = sd(breaks)) 
+
+# When a group_by is specified before summarize, those summaries are provided within each group, defined by the categorical variable(s) you grouped by
+
+warpbreaks %>% 
+  group_by(wool) %>% 
+  summarize(avgBreaks = mean(breaks),
+            sdBreaks = sd(breaks)) 
+
+# You can also group by multiple variables, in which case you will get one row for every unique combination of those two variables that appears
+
+warpbreaks %>% 
+  group_by(wool, tension) %>% 
+  summarize(avgBreaks = mean(breaks),
+            sdBreaks = sd(breaks)) 
+```
+
