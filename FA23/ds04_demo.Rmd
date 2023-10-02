@@ -1,0 +1,159 @@
+---
+title: "Discussion 4"
+author: "Cameron Jones"
+date: 'Week of October 2'
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+# Concept Review: lubridate and dplyr II
+
+### Data: Lakers 2008-2009
+
+```{r}
+# lakers is one of lubridate's built in dataframes! See them all with data().
+lakers %>%
+  select(date, etype, team, player, result, points) %>% 
+  head()
+```
+
+## Concept: Parse Non-Dates into Dates with lubridate
+
+When you read in data with dates in it, very often it will read in as a NUMBER (integer) or a WORD (string). 
+
+However, if we want to do date-specific operations on it (e.g. extract the month or the day of the week), it needs to be a DATE.
+
+```{r}
+lakers %>% 
+  distinct(date) %>% 
+  head(n = 5)
+```
+
+This column is numeric right now. It is not reading 20081028 as October 28th, 2008; it is reading it as the number 20 million, 81 thousand and 28, so we cannot do date operations on it, such as getting the month.
+
+```{r, error = TRUE}
+lakers %>% 
+  mutate(extractedMonth = month(date))
+```
+
+So how do we convert it to a date? The ORIGINAL date as we read it in, is in the form **Y**ear (2008) **M**onth (10) **D**ay (28), so we use the function **ymd()**.
+
+Functions like ymd() exist for every possible form of dates, including mdy(), dmy(), et cetera. They are based on how the ORIGINAL date comes in.
+
+```{r}
+lakers2 = lakers %>% 
+  rename(old_date = date) %>% 
+  
+  # change date from an INTEGER, in the form year-month-day, to a DATE
+  mutate(new_date = ymd(old_date)) %>% 
+  
+  select(new_date, old_date)
+
+lakers2 %>% 
+  distinct() %>% 
+  head()
+
+str(lakers2)
+```
+
+Note the type of new_date is Date and the type of old_date is int.
+
+## Concept: Extract Components from Dates
+
+Once we have converted the column into a date, we can do date-based operations on it.
+
+```{r}
+lakers2 %>% 
+  mutate(
+    new_month = month(new_date, label = TRUE),
+    new_weekday = wday(new_date, label = TRUE),
+    new_dayInYear = yday(new_date)
+  ) %>% 
+  distinct() %>% 
+  head()
+         
+```
+
+## Complicated Dplyr Examples
+
+Here are some extra practice dplyr problems. I display the final solution in the html, but NOT the solution code. **The solution code is in the Rmd.**
+
+**Question:** Calculate the percent of shots the Lakers made in each game. Display the top three games by shot percentage.
+
++ Note: When I say "shots", I refer to rows where etype == "shot".
+
+We have three tasks here:
+
++ filter to events which are shots taken by the Lakers (not their opponents)
++ calculate the proportion of made shots per game (reducing the dataframe to one row per game) (this is the tricky one for most students)
++ obtain the three highest games by shot percentage
+
+```{r, echo = FALSE}
+# Step 1
+lakers_shots = lakers %>% 
+  filter(etype == "shot" & team == "LAL")
+```
+
+```{r, echo = FALSE}
+# Step 2
+lakers_shots_calculations = lakers_shots %>% 
+  
+  # we want a row for each DATE, which identifies games uniquely
+  # note that we don't have to convert this to a date; you can if you want, but we have no need to do any date-based operations on it
+  group_by(date) %>%
+  
+  # Compute the following metrics within each DATE (game):
+  summarize(
+    # the expression result == "made" is a list of TRUE and FALSE. summing this list counts the number of TRUEs; i.e. the number of shots made
+    n_shots_made = sum(result == "made"), 
+    
+    # within each DATE, how many rows are there? because we have filtered down to just shots, this is the number of shots taken
+    n_shots_taken = n(),
+    
+    shot_percentage = n_shots_made/n_shots_taken
+  )
+
+# lakers_shots_calculations now has a row for every game, with the percentage of shots they made in that game
+```
+
+```{r, echo = FALSE}
+# Step 3
+lakers_shots_calculations %>% 
+  slice_max(shot_percentage, n = 3)
+```
+
+**Question:** This dataset contains games in six different months, November through April. *Within each of those months*, which Lakers player had the highest free throw percentage? Players must have taken at least 20 free throws within that month to be included.
+
++ Note: Here we are looking at etype == "free throw".
+
+```{r, echo = FALSE, message = FALSE}
+lakers %>%
+  # Step 1: Look at just Lakers free throws
+  filter(etype == "free throw", team == "LAL") %>% 
+  # Step 2: Create the "month" variable that we need
+  mutate(actual_date = ymd(date),
+         month = month(actual_date, label = TRUE)) %>% 
+  
+  # Within each player-month:
+  group_by(player, month) %>% 
+  summarize(
+    # How many did they make?
+    ft_made = sum(result == "made"),
+    # How many did they take total? (number of rows within that player-location, because every row is a free throw)
+    ft_taken = n(),
+    # Divide the two for their percentage
+    ft_percentage = ft_made/n()
+  ) %>% 
+  #ft_taken does not exist in the initial dataframe, it is created by the summarize above
+  filter(ft_taken > 20) %>% 
+  
+  # Here we exploit the fact that slice_max has to obey the group_by function, and return the top 1 row (player) within each level of group_by (month)
+  group_by(month) %>% 
+  slice_max(ft_percentage, n = 1)
+```
+
+
