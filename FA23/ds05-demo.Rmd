@@ -1,0 +1,63 @@
+---
+title: "Discussion 5"
+author: "Cameron Jones"
+date: "Week of October 9"
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+# Concept Review: Pivoting with tidyr
+
+#### Data
+
+I use ```table1``` and ```table2``` in this content review, which are built-in dataframes in the **tidyr** package.
+
+#### Pivoting Review
+
+```pivot_wider()``` and ```pivot_longer()``` change a dataframe from one "arrangement" to the other. They are the inverse operations to each other.
+
+A **conceptual understanding** of what these commands do is critical to using them. 
+
+Unlike ```summarize()```, which REDUCES the information contained in your dataframe, the pivoting commands just REARRANGE information.
+
+Consider the following two tables, which contain all the same information (no more, no less), but encoded in two different ways:
+
+```{r}
+table1
+table2
+```
+
+The first table is said to be in "wide" format; many values for one observation (a single country-year) are spread out widely in a single row. The second table is said to be in "long" format; many values for one observation (country-year) are spread out vertically across many rows.
+
+For statistical or visualization purposes, you might need data in one form; but receive it from an external source in another form. Therefore, it is important to know how to "pivot" between the two.
+
+Converting the wide table1 to the long table2 requires just a single argument; what columns you want to rotate.  ```-c(columns you want to keep)```.
+
+```{r}
+pivot_longer(table1, c(cases, population))
+
+# This would be the same thing, saying that we DON'T want to rotate country and year
+# pivot_longer(table1, -c(country, year))
+```
+
+The columns which you want to pivot will then take the COLUMN NAMES and scrunch them all into a NEW column, called "name"; and their values will pivot next to them, into the column "value". 
+
+You can specify the names of these columns using names_to and values_to; all this does is save you a rename(), these argument are never necessary.
+
+```{r}
+# recall the pipe just passes table1 to be the first argument of pivot_longer
+
+table1 %>% 
+  pivot_longer(c(cases, population), names_to = "type", values_to = "count")
+```
+
+Going the other way requires two argument to ```pivot_wider()```. We'll be creating multiple new columns, one for each of the values in the column we specify as ```names_from```. We take the values which will populate the cells of these new columns from ```values_from```.
+
+```{r}
+pivot_wider(table2, names_from = type, values_from = count)
+```
+
+![](https://fromthebottomoftheheap.net/assets/img/posts/tidyr-longer-wider.gif)
