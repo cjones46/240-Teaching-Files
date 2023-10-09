@@ -34,7 +34,7 @@ The first table is said to be in "wide" format; many values for one observation 
 
 For statistical or visualization purposes, you might need data in one form; but receive it from an external source in another form. Therefore, it is important to know how to "pivot" between the two.
 
-Converting the wide table1 to the long table2 requires just a single argument; what columns you want to rotate.  ```-c(columns you want to keep)```.
+Converting the wide table1 to the long table2 requires just a single argument; a list (wrapped in ```c()```) of what columns you want to rotate. A common alternative when rotating many columns is to write which columns you want to keep and rotate everything else, with ```-c(columns you want to keep)```.
 
 ```{r}
 pivot_longer(table1, c(cases, population))

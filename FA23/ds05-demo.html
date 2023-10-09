@@ -417,7 +417,9 @@ rows.</p>
 form; but receive it from an external source in another form. Therefore,
 it is important to know how to “pivot” between the two.</p>
 <p>Converting the wide table1 to the long table2 requires just a single
-argument; what columns you want to rotate.
+argument; a list (wrapped in <code>c()</code>) of what columns you want
+to rotate. A common alternative when rotating many columns is to write
+which columns you want to keep and rotate everything else, with
 <code>-c(columns you want to keep)</code>.</p>
 <pre class="r"><code>pivot_longer(table1, c(cases, population))</code></pre>
 <pre><code>## # A tibble: 12 × 4
