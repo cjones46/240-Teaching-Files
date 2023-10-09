@@ -15,13 +15,17 @@ library(tidyverse)
 
 I use ```table1``` and ```table2``` in this content review, which are built-in dataframes in the **tidyr** package.
 
-#### Pivoting Review
+## Conceptual Review
 
-```pivot_wider()``` and ```pivot_longer()``` change a dataframe from one "arrangement" to the other. They are the inverse operations to each other.
+```pivot_wider()``` and ```pivot_longer()``` change a dataframe from one structure to the other. They are the inverse operations to each other.
 
-A **conceptual understanding** of what these commands do is critical to using them. 
+A **conceptual understanding** of what these commands do is critical to using them.
 
-Unlike ```summarize()```, which REDUCES the information contained in your dataframe, the pivoting commands just REARRANGE information.
+The pivoting commands' **only** function is to restructure your data. They do not add or remove any information, despite the shape of the dataset changing.
+
+![](https://fromthebottomoftheheap.net/assets/img/posts/tidyr-longer-wider.gif)
+
+## Data Example
 
 Consider the following two tables, which contain all the same information (no more, no less), but encoded in two different ways:
 
@@ -34,7 +38,7 @@ The first table is said to be in "wide" format; many values for one observation 
 
 For statistical or visualization purposes, you might need data in one form; but receive it from an external source in another form. Therefore, it is important to know how to "pivot" between the two.
 
-Converting the wide table1 to the long table2 requires just a single argument; a list (wrapped in ```c()```) of what columns you want to rotate. A common alternative when rotating many columns is to write which columns you want to keep and rotate everything else, with ```-c(columns you want to keep)```.
+Converting the wide table1 to the long table2 requires just a **single** argument; a list (wrapped in ```c()```, not needed if just a single column) of what columns you want to rotate. A common alternative when rotating many columns is to write which columns you want to keep and rotate everything else, with ```-c(columns you want to keep)```.
 
 ```{r}
 pivot_longer(table1, c(cases, population))
@@ -43,9 +47,13 @@ pivot_longer(table1, c(cases, population))
 # pivot_longer(table1, -c(country, year))
 ```
 
-The columns which you want to pivot will then take the COLUMN NAMES and scrunch them all into a NEW column, called "name"; and their values will pivot next to them, into the column "value". 
+The columns which you want to pivot will now rotate and expand to become one column, called "name". 
 
-You can specify the names of these columns using names_to and values_to; all this does is save you a rename(), these argument are never necessary.
+If you pivoted three columns, each observation will now be duplicated three times, each with a different value in the new column, "name". The first row will take on the value of the name of the first column you pivoted. The second row will take on the value of the name of the second column you pivoted, and similarly with the third row.
+
+The values which used to be in multiple columns will now be in a single column called "value", which will correspond to the old column they were in; now encoded in "name" as described in the paragraph above.
+
+The new columns, "name" and "value", can be renamed from within pivot_longer() using the arguments names_to and values_to. All this does is save you a rename, these arguments are NEVER necessary but often helpful.
 
 ```{r}
 # recall the pipe just passes table1 to be the first argument of pivot_longer
@@ -54,10 +62,12 @@ table1 %>%
   pivot_longer(c(cases, population), names_to = "type", values_to = "count")
 ```
 
-Going the other way requires two argument to ```pivot_wider()```. We'll be creating multiple new columns, one for each of the values in the column we specify as ```names_from```. We take the values which will populate the cells of these new columns from ```values_from```.
+Going the other way requires **two** arguments to ```pivot_wider()```. We'll be creating multiple new columns from a single one, one for each of the unique values in the column we specify as ```names_from```. If names_from had seven unique values; for example, the days of the week; then pivot_wider will take this one column and turn it into seven columns (one each for Sunday, Monday, Tuesday, etc.). Observations which used to have seven rows, one for each day of the week, now have one row, with seven variables representing each day of the week.
+
+The cells of these new columns are populated with the values which used to be in a single old column; the one we tell pivot_wider is ```values_from```.
 
 ```{r}
 pivot_wider(table2, names_from = type, values_from = count)
 ```
 
-![](https://fromthebottomoftheheap.net/assets/img/posts/tidyr-longer-wider.gif)
+
