@@ -1,0 +1,180 @@
+---
+title: "Discussion 8 - Demo"
+author: "Cameron Jones"
+date: 'Week of October 30'
+output: html_document
+---
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+# Logistics
+
+Survey results - thank you all for your feedback!
+
+- **Office hours change**
+
+- **Fridays, 12:45 - 2:15** in **1475 MSC** (new room!)
+
+- 1475 MSC is a little bit hard to find; go through the Department of Medical History and Ethics to the right of the elevators. It's one of three rooms in a small offshoot hallway through a large wooden door on your left, after the MHE Department.
+
+## Concept Review
+
+### Constructing "Puzzle Piece" Areas, Part II
+
+In discussion last week, we asked you how to use ```pbinom```, which returned $P(X<=x)$, to obtain $P(X>=x)$.
+
+Now consider a similar problem; using ```pnorm``` to obtain a closed interval, like $P(a < X < b)$.
+
+Consider $X \sim N(10, 5)$. Suppose we are interested in $P(5 < X < 20)$. This area is visualized below:
+
+```{r}
+mu = 10
+sigma = 5
+
+gnorm(mu, sigma) +
+  geom_norm_fill(mu, sigma, 5, 20, fill = "purple")
+```
+
+How can we obtain this area only using the area to the left of certain points?
+
+The purple area above can be found by subtraction. Take all the area left of 20 (blue transparent), and subtract all the area to the left of 5 (red transparent). 
+
+```{r}
+gnorm(mu, sigma) +
+  geom_norm_fill(mu, sigma, b = 20, fill = "blue", alpha = 0.5) +
+  geom_norm_fill(mu, sigma, b = 5, fill = "red", alpha = 0.3)
+```
+
+```{r}
+### the whole blue area, left of 20, P(X < 20)
+pnorm(20, mu, sigma)
+
+### the red area, left of 5, P(X < 5)
+pnorm(5, mu, sigma)
+
+### the desired purple area! P(5 < X < 20)
+pnorm(20, mu, sigma) - pnorm(5, mu, sigma)
+```
+
+Why don't we have to worry about ```pnorm``` giving $P(X <= x)$ instead of $P(X < x)$? Because equality doesn't matter in continuous distributions - see EXTRA section at the bottom of this file for more information!
+
+### Homework-Level Inference Example
+
+A psychic claims that they can tell the suit of a mystery card you pick - you test them with 24 mystery cards (picked with replacement). There are four unique suits a card can be.
+
+> Q: If the psychic is guessing at random, what distribution does the number of correct guesses follow?  
+
+A: $Binom(24, 1/4)$.
+
+> Q: If the psychic is guessing at random, how many would you expect them to get right?
+
+A: $E[Binom(24, 1/4)] = 24 * 1/4 = 6$.
+
+Say the psychic gets 8 cards correct. Is this enough to convince you of their ability?
+
+STRATEGY: Assume the psychic is guessing at random. If the observed outcome is extremely unlikely under that assumption, we *infer* they are not guessing at random, and in fact have psychic abilities.
+
+> Q: If the psychic is guessing at random, what is the probability of getting AT LEAST 8 right?
+
+```{r}
+# X ~ Binom(24, 1/4)
+# We want: P(X >= 8)
+
+# P(X >= 8) = 1 - P(X <= 7)
+
+1 - pbinom(q = 7, size = 24, prob = 1/4)
+```
+
+This probability - the probability of observing something at least as extreme as the real data under the assumption of randomness - is called the **"p-value"**.
+
+In practice, we require a p-value LESS THAN 0.05 to convince us there is a non-random relationship or pattern.
+
+In the context of this problem, because it is plausible to get 8 out of 25 right through pure luck, it is NOT enough to convince us the psychic is better than a random guess in the long run.
+
+### Framing Inference Questions
+
+Your entire project is based on using statistical inference to answer your question of interest.
+
+As such, it is important to have a question of interest that invites a statistical answer.
+
+Furthermore, your variables should be clearly defined, and it should be obvious which variable you are treating as the cause and the effect.
+
+**Examples of INVALID inference questions**
+
+* Which team won the most NFL games last season?
+  + This is a "what's the biggest number" question - there is no prediction, no uncertainty.
+  
+* What predicts the COVID death rate in a state?
+  + This question is too broad, too ambitious; needs to be made more specific, inquiring about the existence or not of a relationship between exactly two variables.
+  
+* What is the relationship between position on the field and height among soccer players?
+  + This is better, but it's not particularly clear how "position on the field" is defined.
+
+**Examples of GOOD inference questions:**
+
+* Is there evidence that residents of Wisconsin are taller than the national average?
+* Does a state voting Democrat in the last election predict a higher average age than if they voted Republican? 
+  +   These questions DO lend themselves to statistical inference. While it is true that you are comparing two numbers, you can check using statistical inference if the difference is large enough to infer it is because of a real pattern/relationship or just by random luck.
+  
+* Does a country's GDP predict their happiness level according to the Global Happiness Index?
+  +   Notice the clear definition of "happiness", which would otherwise be unclear how to measure.
+  +   If you structure a question like this - a continuous variable predicting a continuous variable - this is a linear regression question, which we'll learn last in the course.
+    
+### EXTRA: P(X = x), Discrete vs. Continuous
+
+Too much to cover in discussion - this section covers a technical nuanced difference between discrete and continuous distributions.
+
+The binomial distribution is *discrete* ; it counts the number of successful trials, so it must be a non-negative integer. Recall the BINS acronym from lecture and last discussion for identifying binomial random variables.
+
+```{r}
+gbinom(10, 0.5, size = 2) +
+  geom_binom_density(10, 0.5, a = 4, b = 4, color = "red", size = 2)
+```
+
+The probability that a binomial variable takes on an exact value is known and easily calculable; we have the closed mathematical formula for this, but all you need to know is that it is calculable with `dbinom(x, n, p)`.
+
+```{r}
+dbinom(4, 10, 0.5) # The height of the red bar above; this is P(X = 2), where X ~ Binom(5, 0.6)
+```
+
+**$P(X <= x)$ and $P(X < x)$ are DIFFERENT in the binomial distribution, by the value of $P(X=x)$.**
+
+The normal distribution is *continuous*; it can take on any value in a range, not just limited to whole or positive numbers.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_segment(aes(x = 4, xend = 4, y = 0, yend = dnorm(4, mean = 5, sd = 2)), color = "red", size = 2)
+```
+
+The probability that a *normal* variable takes on a specific value is *arbitrary*, because it is continuous. The probability you get EXACTLY a certain value from a continuous distribution is effectively 0.
+
+Attempting to calculate this with `dnorm` just refers to the height of the density function at a specific point.
+
+```{r}
+dnorm(4, mean = 5, sd = 2) # The height of the red bar above; NOT P(X = 4)
+```
+
+```{r}
+rnorm(100, 5, 2) 
+
+# Notice how none of these random values are exactly 4, even though dnorm implies around 18% of them should be
+sum(rnorm(100, 5, 2) == 4)
+```
+
+**$P(X <= x)$ and $P(X < x)$ are the SAME for a normal distribution, because $P(X = x)$ is 0.**
+
+Where as the probability of specific points has little meaning, *area* under the normal curve does have real meaning.
+
+```{r}
+gnorm(5, 2, size = 2) +
+  geom_norm_fill(5, 2, b = 4, fill = "red")
+```
+
+```{r}
+pnorm(4, 5, 2) #The red area above; this is equivalent to P(X <= 4) and P(X < 4)!
+```
+
