@@ -1,0 +1,172 @@
+---
+title: "Discussion 9 - Demo"
+author: "Cameron Jones"
+date: "Week of November 6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../../scripts/ggprob.R")
+```
+
+# Concept Review: Confidence Intervals
+
+## General Form
+
+The goal of a confidence interval is to generate a small interval, which we are highly confident contains the true value of a parameter.
+
+Recall that parameters are unknowable values of the population, they are the object of interest; if we knew them, there would be no point to statistics!
+
+All confidence intervals follow the same formula (for the purpose of this class).
+
+$$
+\text{Point Estimate } \pm \text{Critical Value *} \text{ Std. Error of Estimate}
+$$
+
+The product on the right is sometimes collectively called the "margin of error." 
+
+
+## Dissecting the Confidence Interval Formula
+
+This section refers to the "General Theory" formula at the top of this time.
+
+### Point Estimate
+  
++ The **point estimate** is the value we calculate *from the data* which we use to estimate the parameter. For example, the sample mean $\bar{x}$ is our point estimate for the unknown population mean $\mu$, and the sample proportion $\hat{p}$ is our point estimate for the unknown population proportion $p$.
+
+  - Because the formula has the form $\text{Point Estimate } \pm \text{ Something}$, the point estimate is the **center of the confidence interval**.
+
+### Critical Value
+
+#### Theory
+
++ The **critical value** (you may hear us call this the quantile score, z-score, z-quantile, t-score or t-quantile) encodes **how much confidence you want in your interval.** 
+
++ Mathematically, it is **the number of standard errors** one needs to go in each direction from the center of the sampling distribution in order to reach the desired confidence.
+
+  - So why don't we just construct intervals with really high confidence? If you want more confidence in your interval, the critical value will increase, increasing the margin of error, widening your interval and reducing its usefulness. There is a trade-off between a high confidence and useful interval.
+
+  - For example, let's say the mystery $p$ you are estimating is 55%.
+
+  - If you construct a 99% confidence interval, it is going to be something like [0.45, 0.65]. That's not particularly useful, as it is a very wide range.
+
+  - You might calculate the 95% confidence interval above as [0.53, 0.57]... this is both useful and high confidence.
+
+  - Finally, you could calculate the 60% confidence interval as [0.549, 0.551] - this is a small interval, which we want, but 60% confidence is very low.
+
++ To compute the critical value, you must know two things; how much confidence you want in your interval (user selected), and what the _sampling distribution_ of the point estimate is.
+
+##### Aside: Sampling Distribution
+
++ The sampling distribution of your point estimate encodes exactly how your point estimate varies around the true value. For example, $\bar{x}$ and $\hat{p}$ come from a normal distribution according to Central Limit Theorem; when we get to linear regression, $\hat{\beta}$ comes from a "Student's t distribution".
+
+#### Computing the Critical Value
+
+If we want to go out from the center of the sampling distribution and capture $P%$ of the data, how can we compute the x position which does this?
+
+Recall that ```qnorm(p)``` gives us the x position for which $P(X <= x) = p$. We can manipulate this to give us what we want.
+
+```{r, echo = FALSE}
+mysteryValue = qnorm(0.975)
+```
+
+```{r, fig.height = 4, fig.width = 4}
+gnorm() + geom_norm_fill(a = -mysteryValue, b = mysteryValue) + geom_vline(xintercept = mysteryValue, linetype = "dotted", color = "black", size = 1)
+```
+
+We want to find this mystery x value which partitions off 95% of the data centrally.
+
+If 95% of the data is in the center... then 2.5% is on each side. If 2.5% is on each side... then 97.5% is to the left!
+
+```{r, fig.height = 4, fig.width = 4}
+gnorm() + geom_norm_fill(b = mysteryValue) + geom_vline(xintercept = mysteryValue, linetype = "dotted", color = "black", size = 1)
+```
+
+Therefore, our mystery value is the 97.5% quantile of the normal distribution, which we can find with:
+
+```{r}
+qnorm(0.975)
+```
+
+### Standard Error of Point Estimate
+
++ Finally, if the critical value is _how many_ standard errors one needs to go in both directions, we need to multiply it by the actual value of the standard error.
+
+  - This will often be inversely related to $n$; the larger sample you have, the more certainty you have, the smaller your interval will be.
+
+  - These will be a few formulas that we ask you to memorize.
+
+## Homework-Level Problem: Calculating a Confidence Interval: Difference in Proportions
+
+We wish to calculate a **90%** confidence interval for the DIFFERENCE between some $p_1$ and $p_2$ in the population. We do not care about the individual values $p_1$ and $p_2$ necessarily; we care about whether or not their difference is 0.
+
+**Question:** Is there evidence for a difference in the true chance for a Wisconsin basketball player ($p_1$) and a Marquette player ($p_2$) to make a free throw? (2022-23) 
+
+**Data:**
+Wisconsin made 287 of 428 (67.1%) free throws last season.
+Marquette made 422 of 588 (71.8%) free throws last season.
+
+Note: 5% is not a huge difference, but we have a relatively large amount of data. Is there evidence that Marquette players were genuinely better, or were they just lucky?
+
+\[H_0: p_1 - p_2 = 0\]
+\[H_A: p_1 - p_2 \neq 0\]
+
+Equivalently: $p_1 = p_2$, $p_1 \neq p_2$, and while this is easier for interpretation it loses sight of the fact we are not interested in $p_1$ and $p_2$ explicitly, just their difference.
+
+```{r}
+# Raw data; "1" for Wisconsin, "2" for Marquette
+x1 = 287
+n1 = 428
+p_hat1 = x1/n1
+  
+x2 = 422
+n2 = 588
+p_hat2 = x2/n2
+```
+
+> Q: What is our POINT ESTIMATE for p1 - p2?
+
+```{r}
+# Answer: p_hat1 - p_hat2
+point_estimate = p_hat1 - p_hat2
+```
+
+> Q: How do we calculate the **90%** QUANTILE SCORE for p1-p2?
+
+```{r, eval = FALSE}
+qnorm(???)
+```
+
+```{r}
+# Answer: If 90% is in the middle, 5% is on each side, so 95% is to the left of our critical value!
+cv = qnorm(0.95)
+
+cv
+```
+
+> Q: What is the standard error of the estimate?
+
+```{r}
+# Answer: We invoke the Wald formula for standard error from lecture.
+
+SE1 = sqrt( p_hat1*(1-p_hat1) / n1 )
+SE2 = sqrt( p_hat2*(1-p_hat2) / n2 )
+
+SEcombined = sqrt(SE1^2 + SE2^2)
+```
+
+> Putting it all together...
+
+```{r}
+CILower = point_estimate - cv * SEcombined
+CIUpper = point_estimate + cv * SEcombined
+
+CILower
+CIUpper
+```
+
+
+
+
+
