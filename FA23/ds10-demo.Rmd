@@ -1,0 +1,160 @@
+---
+title: "Discussion 10 - Demo"
+author: "Cameron Jones"
+date: "Week of November 13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+# Concept Review
+
+##### Data: Plant Growth
+
+We're looking at the weights of ten plants which have all been given the same growth treatment. We consider this set of 10 to be a sample from a hypothetical set of giving all possible plants this treatment.
+
+We are interested in the mean of that population.
+
+```{r}
+PlantGrowth %>% filter(group == "ctrl")
+```
+
+
+### Homework-Level Single Mean Inference
+
+Is there evidence the true mean weight of the control plants is something different than 5?
+
+**Model**
+
+$$
+Y_i \sim D(\mu, \sigma)
+$$
+
+We assert that each control plant's weight, $Y_i$, comes from some unimportant distribution $D$ (doesn't have to be normal, by the Central Limit Theorem) which has mean $\mu$ and standard deviation $\sigma$. Again, we are interested in $\mu$.
+
+**Hypotheses**
+
+$$
+H_0: \mu = 5
+$$
+
+$$
+H_A: \mu \neq 5
+$$
+
+**Test Statistic**
+
+As we said above, the individual $Y_i$ plant weights follow some unknown and irrelevant distribution $D(\mu, \sigma)$. However, usefully, we know by the central limit theorem that the sample mean $\bar{Y}$ has the distribution:
+
+$$
+\bar{Y} \sim Normal(\mu, \frac{\sigma}{\sqrt{n}})
+$$
+
+This can be rewritten as:
+
+$$
+\frac{\bar{Y}-\mu}{\sigma/\sqrt{n}} \sim Normal(0, 1)
+$$
+
+Where n is the size of our sample (10 here).
+
+This would be really nice... if we knew $\sigma$. We don't know the true $\sigma$. We can estimate $\sigma$ with $\hat{\sigma}$, the sample standard deviation. If we replace $\sigma$ with $\hat{\sigma}$ in the formula, the distribution is no longer normal, but something slightly more random called a t distribution.
+
+$$
+\frac{\bar{Y}-\mu}{\hat{\sigma}/\sqrt{n}} \sim t(n-1)
+$$
+
+A couple notes on the t distribution:
+
+  - Unlike Binomial and Normal which have two, the t distribution has just one parameter: the "degrees of freedom", n-1 here
+  - It is very similar to the standard normal distribution, especially for large n; see lecture example
+  
+**Sampling Distribution**
+
+Under the null hypothesis which states that $\mu = 5$,
+
+$$
+\frac{\bar{Y}-5}{\hat{\sigma}/\sqrt{n}} \sim t(n-1)
+$$
+
+**Outcomes**
+
+We observe the sample mean and standard deviation:
+
+```{r}
+PlantGrowth %>% filter(group == "ctrl") %>% summarize(sampleMean = mean(weight), sampleSD = sd(weight))
+```
+
+Our alternative hypothesis is two-sided, so anything as far or further from the null value of 5 constitutes evidence against the null. Therefore, any value of the sample mean outside the range [4.968, 5.032] is evidence.
+
+From the sampling distribution, which is $t(n-1) = t(10-1) = t(9)$, this is any value outside the range [$\frac{4.968-5}{0.58/\sqrt{10}}, \frac{5.032-5}{0.58/\sqrt{10}}$].
+
+```{r, warning = FALSE}
+
+# Note that we are plotting the transformed t-scores; the points are not the raw data of 4.968 and 5.032.
+
+gt(df = 9) +
+  geom_t_fill(df = 9, b = (4.968-5)/(0.58/sqrt(10)), fill = "dodgerblue") +
+  geom_t_fill(df = 9, a = (5.032-5)/(0.58/sqrt(10)), fill = "dodgerblue") +
+  xlim(-3, 3)
+```
+
+
+**p-value**
+
+Just like pnorm and pbinom, pt returns $P(X \leq q)$, where $X \sim t(df)$, and you only have to specify q and df.
+
+```{r}
+sampleMean = 5.032
+sampleSD = 0.5830914
+n = 10
+
+StdError = sampleSD/sqrt(n)
+
+# That complicated formula for leftPoint is just getting the equidistant point, 4.968, then subtracting that from 5. You can hard code it if you want.
+
+# If you are adapting this code to another problem; make sure you know whether your observed sample mean is right or left of the null value!
+
+leftPoint = (5-(sampleMean-5)-5)/StdError
+rightPoint = (sampleMean - 5)/StdError
+
+# area left of range + area right of range
+pt(leftPoint, df = n-1) + (1 - pt(rightPoint, df = n-1))
+```
+
+**Interpret p-value in context**
+
+We do NOT have strong evidence to say the true average weight differs from 5.
+
+**Confidence Interval**
+
+Recall our formula for a confidence interval is:
+
+$$
+(\text{Point Estimate of } \mu) \pm (\text{Quantile Score})(\text{Std. Error})
+$$
+
+Our point estimate of $\mu$ is $\bar{Y} = 5.032$.
+
+Before, our quantile scores were coming from the standard normal distribution; now they are coming from the t(n-1) distribution.
+
+We calculate the standard error above; $SE(\bar{Y}) = \hat{\sigma}/\sqrt{n}$.
+
+```{r}
+q_score = qt(0.975, df = 9) # This is 2.26; not 1.96! 
+
+sampleMean - q_score * StdError
+sampleMean + q_score * StdError
+```
+
+We can verify our p-value and confidence interval with the t.test function.
+
+```{r}
+data = PlantGrowth %>% filter(group == "ctrl") %>% pull(weight)
+t.test(data, mu = 5)
+```
+
