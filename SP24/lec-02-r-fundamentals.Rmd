@@ -1,0 +1,292 @@
+---
+title: "STAT 240: R Fundamentals"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(tidyverse)
+```
+
+## Supplementary Material
+
+* Material in this lecture is supplemented by Professor Bret Larget's *CNCS* (Course Notes and Case Studies) [chapter 2](https://bookdown.org/bret_larget/stat-240-case-studies/prerequisites.html) and [chapter 5](https://bookdown.org/bret_larget/stat-240-case-studies/r-fundamentals.html).
+
+## Learning Outcomes
+
+* This lecture will teach you how to:
+    + Navigate and use the course directories
+    + Manage files, paths, and directories
+    + Install and load a package
+    + Navigate and interact with RStudio
+    + Understand and manipulate R Markdown documents
+    + Knit an R Markdown document and open the associated html file
+    
+    
+> The primary focus of this lecture is to guide each student through setting up local course directories and packages so that students may properly interact with course files, and to familiarize them with RStudio.
+
+## Setting up course directories
+
+##### EXERCISE: Create course directories
+
+* Live demonstration of creating course directories
+
+    + `COURSE/`: Most people call this "Stat 240" or similar. It is the home folder, we'll refer to it as COURSE but you can call it whatever you want, and it can be wherever you want. (Leave R and RStudio where they are by default, no need to move them into here.)
+    + `COURSE/data/`: This is where ALL data files (.csv, .tsv, .xlsx) will go for the whole course
+    + `COURSE/scripts/`: We'll mainly use this folder during the second half of the course
+    + `COURSE/hw/`
+        - `COURSE/hw/hw01/`
+        - `COURSE/hw/hw02/` ... and so on
+    + `COURSE/discussion/`
+        - `COURSE/discussion/ds01`... and so on
+    + `COURSE/lecture/`
+      - `COURSE/lecture/unit01-intro/`
+      - `COURSE/lecture/unit02-ggplot2/`... and so on 
+
+## Browser settings
+
+* It is not required for the course, but will be very helpful to make this minor change to how you download files.
+
+---
+
+##### EXERCISE: Set browser settings and practice downloading course files
+
+* Live demonstration of changing Chrome settings
+
+* **Chrome**: Go to chrome://settings/downloads
+    + Turn on "Ask where to save each file before downloading"
+    
+* **Safari**: https://www.macrumors.com/how-to/change-safari-download-save-location-mac/
+
+Let's practice downloading course files, now that we have the browser settings and course directories set up.
+
+* From the Canvas page for Week 1 (linked on the main schedule, or find through Pages), please **download**:
+    + This file, `lec-02-r-fundamentals.Rmd`, to `COURSE/lecture/unit01-intro`
+    + The data file `lake-mendota-winters-2023.csv` to `COURSE/data`.
+    
+* **Open** `lec-02-r-fundamentals.Rmd`, which should open an RStudio window.
+   
+---
+
+* We will learn more about what exactly you are looking at in RStudio shortly, but there is some more background and setup we need to cover first.
+
+## Paths
+
+* A *path* is a string (sequence of characters) which represents a location ("directory") in a computer's file system.
+    + An *absolute path* begins at the root of the file system
+    + Recognize an absolute path beginning with a slash (`/`)
+    + Example: `/Users/larget/Documents/stat240/`
+    + **Always** use the forward slash `/` instead of the backslash `\` in paths in R
+       
+* It would be annoying if we always had to start from the root of our computer; especially if all the files we want are close to each other.
+
+* To remedy this, a *relative path* does not begin with a `/`, but instead some predetermined convenient start point, called the *working directory*. These are what we will use in this course.
+
+### The Working Directory
+
+---
+
+##### EXERCISE: Check your working directory settings
+
+* We want the working directory to be *the location of the R Markdown file you are working with*.
+    + In RStudio, set `Tools > Global Options > R Markdown > Evaluate Chunks in Directory` to "Document" and hit `Apply`.
+    + Now, when you run code from an R Markdown file that uses a relative path, the path will start at the file's location itself.
+    
+> Post-lecture addendum: If you do not see this setting when you navigate to that location, it is okay, this setting is set to "Document" invisibly and there is no action needed from you.
+    
+---
+
+### Examples
+
+* Consider working with a file in `COURSE/lecture/unit01-intro`, and trying to access the path `"myFile.csv"`. This is a relative path, so it will look for a file called `myFile.csv` within the working directory `COURSE/lecture/week01-intro`(i.e. in the same place as the file you're working in).
+    
+* Now consider the common scenario in which you are working in `"stat240/hw/hw01/hw01.Rmd"`, and from this file, you need to access `"stat240/data/lake-mendota-winters-2023.csv"`. We are starting in the `hw01` directory, so we need to go up a level to its parent, `hw`, go up a level to the parent of `hw`, which is `stat240`, and from there use the above concept to go into `data` and find the desired file.
+    
+* The special symbol `..` refers to the parent of the current directory within a path. So the path we need in the above scenario is `"../../data/lake-mendota-winters-2023.csv"`.
+    
+* In R, put quotes (typically double, `"`, but single `'` works too) around the string that represent the path.
+  
+## R Markdown Documents
+
+* R Markdown documents, indicated by the file extension ```.Rmd```, is separated into three distinct sections:
+
+    1. The YAML section (a preamble to set some parameters)
+    2. Markdown language (simple plain text, like this, with words and some control over formatting)
+    3. R code chunks (sections of R code with arguments to set options about execution and what to display in the knitted document)
+
+* When you *knit* an R Markdown document by clicking the Knit button (more on this later), it will produce in a separate file a well-formatted report based on the contents of the `.Rmd`; in this class, that well-formatted report will be an `.html` file. 
+
+### YAML
+
+- The YAML section is at the start of the file and begins and ends with three dashes, `---` alone on a line
+- You can adjust many things about a document through its YAML section, we will just use it to specify things like title, author, date, and the type of output we want the document to produce.
+- My lecture files will use the following output type: This just makes them "prettier" and produces the outline in the knitted file.
+    
+````
+---
+output: rmdformats::readthedown
+---
+````
+- We will set this for you; everything else in the course will use the less pretty but more functional:
+````
+---
+output: html_document
+---
+````
+
+### Markdown
+
+* Markdown is plain text like this, with some control over simple formatting. It allows you to convey formatting concepts solely through the symbols on a keyboard.
+
+* A few useful formatting basics:
+    + Use hashes `#` to create headers.
+        - A single `#` is a very large header
+        - The more hashes (`####`, for example), the smaller the header is.
+
+- Put a single asterisk on both sides of text for *italics* in the knitted file.
+- Put two asterisk on both sides of text to make it **bold** in the knitted file.
+
+- See the [R Markdown cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf) for more details.
+    
+### R chunks
+
+* Code chunks contain CODE, rather than plain language.
+
+- A chunk of R code within an R Markdown file begins with three single back ticks followed by an open brace, the letter `r`, an optional space and name for the code chunk, and then optional arguments for knitting separated by commas before an end brace.
+
+* RStudio intelligently colors code chunks and its contents differently from markdown language so you can tell what you're working in.
+
+* The chunk ends with three single back ticks alone on a line.
+    + You can also use `Code > Insert Chunk`, or the keyboard shortcut `Ctrl+Alt+I` (Windows) or `Command+Option+I` (Mac).
+
+* **Leave a blank line before and after each code chunk.** This will prevent formatting and coding issues.
+
+* As an example, with this .Rmd file open in RStudio on your own computer, take a look at the following chunk. 
+    + Notice how it has a different color background than this "markdown" text.
+    + Notice how it appears in the knitted file.
+    + Try running the code:
+        - Click the green "play" button in the top right corner of the chunk, OR,
+        - Click your cursor within the chunk, then click "Run" near the top right of this whole panel, and then select "Run Current Chunk", OR,
+        - With your cursor within the chunk, press `Ctrl` (`Command` if you have a Mac), `Shift`, and `Enter` at the same time.
+
+```{r}
+# This is a "comment"; preceded by #
+
+# It allows you to write plain text within code chunks, helpful for adding explanations to larger code chunks.
+
+# The next line of code (notice it has no # before it and it is a different color) runs a command, getwd(), which stands for get working directory.
+
+# This chunk should output the location of this file.
+
+getwd()
+```
+    
+> If this line does NOT show you the location of the file, click on `Session > Set Working Directory > To Source File Location` and try again.
+    
+## The Console
+
+* The console is like your **scratch paper**; you can test out code here, but it won't be documented anywhere. For that, you have to add it to your R Markdown file. **For this reason, we recommend doing most if not all of your code testing in your R Markdown file**, but the console still has its usefulness.
+
+---
+
+##### EXERCISE: Practice using the console
+
+* Navigate to your console, which is usually in the bottom left panel of R Markdown. (Notice the "minimize" and "open" buttons.)
+    + If you can't find it, use `View > Move Focus to Console`. R Markdown can be overwhelming visually, the `View` options are your friend.
+  
+* For example, click within the console (your cursor should start blinking in blue with the `>` symbol), and type `2+2`, then hit enter.
+
+*Note: If you type an incomplete expression into the console, such as `2+` or `(2+2`, the console will wait for you to "finish" the expression, even after you hit enter. You can tell it is waiting for more input because `>` on the left will change to `+`. Hit `esc` in the top left of your keyboard to reset.*
+
+---
+  
+* If you are running meaningful code in the console, which we don't recommend, you should know the console's working directory is not automatically the location of the file you have open. 
+    - To set it to the location of the open file, use `Session > Set Working Directory > To Source File Location`.
+  
+  * You can do almost anything in RStudio quickly with the console if you know the right command, and you can also do almost anything in RStudio slowly without the console, instead using the littany of menus and options it provides; including checking help files and installing packages.
+
+## Packages
+
+* A strength of R is that users can create their own collection of commands and data, publish them to the internet, and allow others to download them. These user-written, public collections are called "packages".
+
+* We will use a few packages for this course.
+
+* You only need to get the package from the internet once; think of this like going to the hardware store, buying the tool, and putting it in your toolbox.
+
+* However, when you open RStudio, your "toolbox" is still closed. You have hundreds of packages ("tools") in there, but you'll only need to use a few at any given time.
+
+* Instead of always emptying the entire toolbox, R saves a ton of computing power by letting you specify which packages you are about to use with `library(packageName)`.
+    + Notice at the top of this .Rmd file (not visible in the knitted file), we included a chunk which loaded `tidyverse`. We will always provide this chunk for you.
+    
+---
+
+##### EXERCISE: Install course packages
+
+* You will need to **install** `tidyverse`, the main package we will use constantly throughout the course.
+    + You may follow the instructions in Section 2.7.1 of the Course Notes (see Supplementary material in the top of this section), OR...
+    + Just run `install.packages("tidyverse")` in your console. 
+    + Either way, you will be bombarded with a lot of text that is just confirming the installation is going through.
+    + If, when installing a package, you are asked if you want to compile, it is best to answer **no**.
+    
+* You should also **install** the package `rmdformats` to be able to recreate my lecture notes, using identical steps to above but with "rmdformats" instead of "tidyverse".
+    
+---
+
+* With the course directories, files, and packages set up we can now read in data!
+
+---
+
+##### EXERCISE: Put It All Together: Reading In Data
+
+* First, **run** the chunk at the very top of this `.Rmd` document, which contains the code `library(tidyverse)`.
+
+* Now, if you have correctly followed each step in this lecture, running the following chunk will work, and it will show you the first few rows of our data, starting with the winter of 1855-56.
+
+```{r}
+mendota = read_csv("../../data/lake-mendota-winters-2023.csv")
+head(mendota)
+```
+
+---
+
+## Knitting
+
+* The point of RMarkdown documents is to combine code, text, and other material in a visually appealing way.
+    - The raw `.Rmd` file contains the "instructions" to make the pretty `.html` file, which is created by knitting.
+    - The syllabus for this class is made by knitting an R Markdown document!
+
+* Clicking the "Knit" button (with the blue ball of yarn icon), above the source code panel will produce a well-formatted html file based on the contents of your .Rmd file.
+
+* You can do this as often or as infrequently as you want; changes to your .Rmd will not automatically update in the knitted html file.
+
+* When this report is created, it will "start from scratch", ignoring any previous code you have run, and run your code chunks in order, top to bottom. (It will also run the code within a chunk from top to bottom.)
+    + This is why we load libraries at the TOP of the file; so we can use their commands in the rest of the file.
+
+> A common mistake for beginniners is to knit a file with code that depends on something else which has not happened yet - like referencing data before you have read it, or variables you have not yet created.
+
+```{r}
+x = 2
+x + 2 # Runs just fine; references x, which already has been assigned the value of '2' above
+```
+
+```{r, error = TRUE}
+y + 2 # Will return an error; references y, which does not exist yet when knitting the file, even if you created y while you were testing your code
+
+y = 2 # Too late!
+```
+
+---
+
+##### EXERCISE: Knit this file
+
+* Click "Knit" on this .Rmd file.
+
+* In your files, navigate to the folder this `.Rmd` is in; should be `COURSE/lecture/unit01-intro`
+
+* Find and open the newly created `.html` file.
+
+* Confirm that the output of the code chunk in the "R chunks" section above is the location of this file on YOUR computer.
+
+---
