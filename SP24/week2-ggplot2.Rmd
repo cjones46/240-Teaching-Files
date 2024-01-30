@@ -369,18 +369,36 @@ ggplot(mendota, aes(x = year1, y = duration, color = intervals) ) +
 * Notice that ggplot2 automatically chose a color scheme for us and created a legend.
     + If you specify a property other than `x` or `y` with a *variable* aesthetic, it will create a legend. 
     + If you specify a property other than `x` or `y` with a *constant* aesthetic like the earlier examples, no legend is necessary.
-    + While ggplot's default choices have been acceptable so far, the legend type it has chosen is perhaps not ideal here. We'll learn more about how to change this in Deeper Customization.
+    + While ggplot's default choices have been acceptable so far, the legend type it has chosen is perhaps not ideal here.
+    
+* The reason the legend is a little misleading is R sees that `intervals` is a `numeric` column, so it wants to account for the possibility of `intervals` being 1.5, or 1.6, or any decimal value between the lowest and highest one it sees. 
+
+* We would rather tell R that `intervals` can only take on two unique values; those values do happen to be numbers, but think of them as if they were distinct categories, like "A" and "B". 
+* This kind of variable is called a `factor` variable in R; we may refer to it as a *categorical* variable.
+
+    + We can remedy this by wrapping `intervals` in the function `as.factor()`.
+    + `as.factor` is part of a family of '`as.*` commands, including `as.numeric()` and `as.character()`, which allows us to quickly switch a column to a different type.
+    
+```{r}
+ggplot(mendota, aes(
+    x = year1, 
+    y = duration, 
+    color = as.factor(intervals)
+    ) # this parentheses ends the aes() call
+  ) + # this parentheses ends the ggplot() call
+  geom_point()
+```
+
+* Now R understands `intervals` can only take two values... the legend is better, and the colors diverge more.    
     
 * Finally, we can and often do use both variable aesthetics and constant aesthetics in the same plot.
     + All points below are set to size 5; a *constant* aesthetic.
     + They are colored by their value of `intervals`, a *variable* aesthetic.
-    + If you set, for example, `color = intervals` within `aes()` AND `color = "red"` within `geom_point`, the local `geom_point` "red" aesthetic would override, for the reason we are about to talk about! 
 
 ```{r}
-ggplot(mendota, aes(x = year1, y = duration, color = intervals)) + 
+ggplot(mendota, aes(x = year1, y = duration, color = as.factor(intervals))) + 
   geom_point(size = 5)
 ```
-
 
 ---
 
