@@ -1,0 +1,300 @@
+---
+title: "STAT 240: Airport Case Study"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      error = TRUE, fig.height = 4)
+library(tidyverse)
+library(scales)
+
+## A script to change default colors in ggplot2
+source("../../scripts/viridis.R")
+```
+
+# Overview
+
+## Learning Outcomes
+
+- These lectures will reinforce dplyr concepts through interactive live coding practice on a real case study.
+    
+## Preliminaries
+
+- You will need the `scales` package for these lecture files, which you can obtain with `install.packages("packageName")`.
+
+## Files
+
+- Files to download to `COURSE/lecture/unit4-readr`
+    - `week4-airport.Rmd`
+    - `week4-airport.html`
+  
+- Files to download to `COURSE/data/`
+  - `DEN-2018.csv`
+  - `JFK-2018.csv`
+  - `LAX-2018.csv`
+  - `MSP-2018.csv`
+  - `ORD-2018.csv`
+  - `SFO-2018.csv`
+  
+- Files to download to `COURSE/scripts`
+  - `COURSE/scripts/viridis.R`
+  
+## Supplementary Material
+
+- [*CNCS* Chapter 10](https://bookdown.org/bret_larget/stat-240-case-studies/airport-waiting-times.html) for background on the airport waiting time data
+
+# The Airport Case Study: more dplyr
+
+- For this analysis, we will read in international arrival data from several airports in the US.
+- The data is collected by the US Customs and Border Control.
+- Details about the data are described in [Chapter 11 of Course Notes and Case Studies](https://bookdown.org/bret_larget/stat-240-case-studies/airport-waiting-times.html).
+
+- We will look at international flight arrival data from 2018 from six US Airports
+  - DEN (Denver)
+  - JFK (New York)
+  - LAX (Los Angeles)
+  - MSP (Minneapolis and St. Paul)
+  - ORD (Chicago, O'Hare)
+  - SFO (San Francisco)
+
+- Each data file is at the **terminal-day-hour** level. E.g., for every day in the year 2018, there are up to 24 separate hours recorded in that day, for each terminal within that airport.
+
+- They contain **terminal-day-hour** information about the number of arriving international flights and the number of passengers, among other information like customs waiting times.
+
+- When we bind all of the **terminal-day-hour** airport files together into one, we end up with one large file at the level of **terminal-day-hour**.
+
+## Read in Data
+
+- We can now read in the data from six different airports and combine into a single data set
+- Here, we do this with one line for each data set and then use `bind_rows()` to combine them.
+- Then, we can delete the temporary files
+
+```{r read-csv}
+den = read_csv("../../data/DEN-2018.csv")
+jfk = read_csv("../../data/JFK-2018.csv")
+lax = read_csv("../../data/LAX-2018.csv")
+msp = read_csv("../../data/MSP-2018.csv")
+ord = read_csv("../../data/ORD-2018.csv")
+sfo = read_csv("../../data/SFO-2018.csv")
+
+awt = bind_rows(den, jfk, lax, msp, ord, sfo)
+# awt is at the airport-day-hour level
+
+rm(den, jfk, lax, msp, ord, sfo)
+# rm standing for "remove", deletes the objects we no longer need to free up some computer memory
+```
+
+# Live Coding Questions
+
+## Passengers by Terminal
+
+> How many passengers and flights went through each airport-terminal combination (in 2018)? Display this in a summary table, with all the terminals from the most popular airports displayed first, and the next most popular airport's terminals shown second, and so on - with terminals sorted within airport by their number of passengers.
+
+* Note that the `all_total` column represents total passengers within that terminal-day-hour, and `all_flights` represents total flights within that terminal-day-hour. We will need to **summarize** these columns to the level of airport-terminal.
+
+- After that, we'll **add a column** `total_airport_passengers` which includes the total number of passengers in the corresponding airport across all terminals. *(Note: this column will repeat values for airports with multiple terminals.)*
+
+* Arrange the table by descending order of `total_airport_passengers` (this will sort the airports by most to least international flights) and then break ties by the total number of passengers in that terminal.
+
+* Remove `total_airport_passengers` and print the table.
+
+```{r}
+
+```
+
+## Days of Data
+
+> How many unique days of data are there for each airport?
+
+* Problem: We can't just count how many times each airport occurs; because different airports have different numbers of terminals, and each terminal might not necessarily have data for every day-hour.
+
+```{r}
+awt %>% 
+  count(airport)
+```
+
+```{r}
+# Live coding
+```
+
+## Which Date is Missing?
+
+- One day is missing for each airport!  Can we figure out which one it is?
+- One approach could be to narrow down by:
+    - adding a month variable
+    - counting the number of distinct days within each month
+    - seeing which total is less than the actual number of days
+    - find the distinct days within that month
+- But a more straightforward way as we did with the Madison weather data is to:
+    - create a mini data frame with all possible dates
+    - join with a data summary of the dates and terminals in the data set
+    - see what is missing
+
+> Identify which date is missing for each airport; is it the same day for each airport?
+
+* We will need the `anti_join` function for this question; we will study this function in more depth next week.
+
+* `anti_join(x, y)` returns all rows in a dataframe `x` which do NOT have a "match" in the dataframe `y`.
+
+```{r}
+# Live Coding
+```
+
+- We see that May 8, 2018, is missing from each airport. Curious!
+
+```{r}
+## check on May 8
+awt %>%
+  filter(date == ymd("2018-05-08"))
+```
+
+## Checking Totals
+
+> Does the `all_total` variable match the sum of the other columns of passenger counts?
+
+- Add a column named `check_total` with the sum of the columns which names begin with "all_n", and "all_excluded"
+- Compare these totals with that in `all_total`
+
+- Filter `awt` to produce a dataframe with the rows where `check_total`, the manually computed total, does not match `all_total`, the given values.
+
+```{r}
+# Live Coding
+```
+
+- There are 44 rows where the totals do not match
+
+## Investigating Mismatches
+
+>  At what time of day and at which airports are these mismatches happening?
+
+```{r}
+# Live Coding
+```
+
+> Create a histogram to show the distribution of the size of these mismatches.
+
+```{r}
+# Live Coding
+```
+
+- In each of the 44 cases where there is a mismatch, the `all_total` variable exceeds the `check_total`
+- This likely means that some of the passengers in the `all_total` column are not included in the specific waiting time counts of passengers.
+- Most of the differences are fewer than five passengers
+- The largest difference is somewhere between 30 and 35
+
+## Busy Months
+
+> Are some months busier than others?
+
+- Begin by adding a month variable to `awt` and then reordering the columns
+- Also add day and weekday for future use
+
+```{r}
+# Live Coding
+```
+
+
+- Total up the number of passengers by month and sort by that total, descending.
+
+```{r}
+# Live Coding
+```
+
+- The previous summary is affected by different numbers of days in each month.
+    - A better solution calculates an average number of daily passengers separately for each month
+- Calculate the average daily rate of passengers by month.
+- (Recall that May has only 30 observations.)
+
+- Key idea here is to:
+    - first summarize by date (and month and day):
+    - sum to get daily totals across airport, hours, and terminal
+    - then group by month
+    - calculate means within the month
+
+```{r}
+# Live Coding
+```
+
+> Display these average daily passengers by month in a bar graph.
+
+```{r}
+# Live Coding
+```
+
+- It looks like the summer months (July, August, June) are the busiest in terms of number of passengers traveling per day for the airports in our data.
+
+## Busy Weekdays
+
+> Are some days of the week busier than others?  
+
+```{r}
+# Live Coding
+```
+
+## Busy Times of the Day
+
+> Are some times during the day busier than others?  
+
+```{r}
+# Live Coding
+```
+
+## Airport Efficiency
+
+### By Wait Time
+
+> Are some airports more efficient than others in terms of average wait time? Show the distribution of each airport's `all_avg_wait` times with a boxplot.
+
+```{r}
+# Live Coding
+```
+
+- We can adjust the plot by reordering the airports in order by the median of their average waiting time for all passengers.
+
+```{r}
+# Live Coding
+```
+
+> What is the average waiting time at each airport for all passengers?
+
+- To calculate this statistic, we need to sum the waiting times for all passengers and divided by the total number of passengers
+
+- Note that it is incorrect to calculate the average for each airport/terminal/date/hour and then average these values as the number of passengers in each row is different.
+  - We want to average by passenger, not by row in the data set
+  
+- The strategy is to calculate the total time by all passengers in each row
+  - This is the average time multiplied by the number of passengers
+  
+- Then, sum times and passengers by airport and divide
+
+```{r}
+# Live Coding
+```
+
+### By Passengers Processed Per Booth
+
+> Do airports differ in the number of passengers processed per booth?
+
+- You can filter out rows where `all_booths` is 0.
+- Add a new column, `passengers_per_booth`, which is the ratio of the number of passengers (`all_total`) per booth (`all_booths`)
+- For each airport, compute the minimum, median, and maximum of `passengers_per_booth`; calculate 
+- Print this table, sorted by descending median of `passengers_per_booth` 
+
+```{r}
+# Live Coding
+```
+
+- MSP has the largest number of passengers per booth
+  - The previous graph showed MSP also had the shortest distribution of waiting times.
+
+> Display the median values in a bar graph
+
+```{r}
+# Live Coding
+```
+
+
+

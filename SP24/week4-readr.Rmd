@@ -1,0 +1,506 @@
+---
+title: "STAT 240: readr & lubridate"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      error = TRUE, fig.height = 4)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+
+## A script to change default colors in ggplot2
+source("../../scripts/viridis.R")
+```
+
+# Overview
+
+## Learning Outcomes
+
+- These lectures will teach you how to:
+    + Read in data from different file types
+    + Convert dates in string format to Date objects
+    + Extract components from dates
+    
+## Preliminaries
+
+- You will need the `readxl` package for these lecture files, which you can obtain with `install.packages("packageName")`.
+
+### Files
+
+- Files to download to `COURSE/lecture/unit4-readr`
+    - `week4-readr.Rmd`
+    - `week4-readr.html`
+  
+- Files to download to `COURSE/data/`
+  - `Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Females.xlsx`    
+  - `Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Males.xlsx`
+  
+## Supplementary Material
+
+- [*R4DS* Chapter 11](https://r4ds.had.co.nz/data-import.html) for information on **readr**
+- [*R4DS* Chapter 16](https://r4ds.had.co.nz/dates-and-times.html) for information on **lubridate**
+
+# readr - Importing Data
+
+* **Reading** data into R is the process of extracting information from some external file and storing that information in a variable we can work with.
+
+* So far this semester, we have always given you `.csv` files, given you code to read the data in using `read_csv()`, and focused on everything that happens after that.
+
+* However, data does not always come in a friendly `.csv` format.
+
+> Data can be stored in many different ways, and the function you use to read the data into R depends on the way it is stored.
+
+* The file extension (such as `.csv`) of a data file often, but not always, tells you about its form.
+
+## Delimiters
+
+> Every data file has a **delimiter**, which indicates when an individual data units starts and ends.
+
+* Delimiters are helpful both to the user and to the `read_*` commands.
+
+* For example, consider the following sequence of names:
+
+```
+Matt Ryan Tom Brady
+```
+
+* This could be reasonably interpreted as four separate first names.
+
+* It could also be reasonably interpreted as the two famous NFL quarterbacks, Matt Ryan and Tom Brady. However, a `read_*` command would never read it this way, because there is no (unique) delimeter between those two full names.
+
+* Consider how you would expect a `read_*` command to interpret each of these:
+
+```
+Matt Ryan, Tom Brady
+```
+
+```
+Matt; Ryan; Tom; Brady
+```
+
+```
+Matt Ryan  Tom   Brady
+```
+
+* The last one in particular is an interesting case; if a single space is the delimiter, there is a blank field between "Ryan" and "Tom", and TWO blank fields between "Tom" and "Brady". Or, if ANY amount of space is a single delimiter, there are no blank fields.
+
+* With the general function `read_delim()`, you can read in data with ANY delimiter.
+
+* However, many common cases have better shortcut functions.
+
+## Comma Separated Values
+
+> In a `.csv` file, standing for Comma Separated Values, the comma ("`,`") serves as the delimiter between individual data values.
+
+* `.csv` is the most common file type for storing data.
+
+* A `.csv` file is a plain text document. There is nothing fancy going on within it, such as html tags or internal code. It is just text, including commas.
+
+* The **first line** usually contains the column names, separated by commas.
+
+* The following lines are the rows of the dataframe (as opposed to how you manually construct one in R, which is column by column), with each field separated by commas.
+
+* We have been using `read_csv()` to read in information from `.csv` files; it will also accept a string with the above specifications.
+
+```{r}
+read_csv("
+         column1, column2, column3
+         T, row1val2, 24,
+         F, row2val2, 25
+         ")
+```
+
+* Notice that column1, column2, and column3 are the column names, not a row of the dataframe.
+
+* Notice that column1 read in as "logical", column2 read in as "character", and column3 is "double" (numeric). 
+
+* Many default behaviors of the `read_*` functions can be modified with arguments to suit the individual needs of a given file. We will explore some here.
+
+### Guessing Column Types
+
+* Let's mix up some strings and numbers to see how it handles each situation.
+
+```{r}
+read_csv("
+         column1, column2, column3
+         row1val1, 24, 24
+         26, row2val2, 25
+         ",
+         )
+```
+
+* This example illustrates an important point of how `read_csv` decides upon column types.
+
+* **All numbers can be treated as words, but not all words can be treated as numbers**, so if a column has even one non-digit (except the decimal point `.`) in it, the whole column will be treated as words.
+
+* This is true for other data types as well; so many columns will "accidentally" be read in as character.
+
+* You can override the column types that R chooses using the `col_types` argument, with a call to the `cols()` function within:
+
+```{r}
+read_csv("
+         column1, column2, column3
+         T, 24, 24
+         F, row2val2, 25
+         ",
+         col_types = cols(
+           column1 = col_character(),
+           column3 = col_character()
+           )
+         )
+```
+
+* You can also just use `mutate()` and one of the `as.something` commands we've seen the past two weeks.
+
+### Handling Unfriendly Files
+
+* Sometimes, `.csv` files will have information in them that is NOT part of the data.
+
+```{r}
+read_csv("Here's some information about this file that I created, pretty neat huh?
+         Here's a little more information. 
+         column1, column2
+         top left, top right
+         bottom left, bottom right
+         ")
+```
+
+* There was a comma in the first line, so `read_csv` broke it into two columns.
+
+* There was no comma in the second line, so `read_csv` leaves an `NA` in the second column for the "first row", the one that contains "Here's a little more information."
+
+* For this situation, you can tell `read_csv` to skip the first `n` lines with the `skip` argument.
+
+```{r}
+read_csv("Here's some information about this file that I created, pretty neat huh?
+         Here's a little more information.
+         column1, column2
+         top left, top right
+         bottom left, bottom right
+         ",
+         skip = 2)
+```
+
+* Some `.csv` files will be even meaner and not give you the column names.
+
+```{r}
+read_csv("Here's some information about this file that I created, pretty neat huh?
+         The column names are in another castle!
+         top left, top right
+         bottom left, bottom right
+         ",
+         skip = 2)
+```
+
+* You can handle this by telling `read_csv` that `col_names = FALSE`, and it will treat the first row of data it reads as the first row of the dataframe, not the column names.
+
+```{r}
+read_csv("Here's some information about this file that I created, pretty neat huh?
+         The column names are in another castle!
+         top left, top right
+         bottom left, bottom right
+         ",
+         skip = 2,
+         col_names = FALSE)
+```
+
+* The columns are automatically named `X1`, `X2`, et cetera.
+
+* All of the custom behaviors we have displayed using `read_csv` are applicable to the other `read_*` commands we are about to go through as well.
+
+## read_csv2()
+
+* Many countries around the world use the comma to delinate the start of decimal values in a number, whereas the typical U.S. symbol is the decimal point ("`.`"). 
+
+* In this setting, the comma no longer works as a delimiter, because `123,45` represents one hundred twenty three and fourty five hundreths (`123.45`), NOT two separate numbers.
+
+* Data files that use this convention typically use a semicolon ("`;`") as their delimiter.
+
+> You can read in files which use `;` as the delimiter (typically due to `,` being the decimal indicator) with `read_csv2()`.
+
+```{r}
+# incorrectly trying to use read_csv
+read_csv("someNumber; someText
+          123,45; ABC
+          81,66; DEF
+         ")
+```
+
+```{r}
+read_csv2("someNumber; someText
+          123,45; ABC
+          81,66; DEF
+         ")
+```
+
+
+## read_tsv()
+
+> Files where a tab is the delimiter can be read with `read_tsv()`; those files often have the extension `.tsv`.
+
+* The tab is a non-constant amount of whitespace designed to keep columns vertically aligned in text files.
+
+* In R, the tab can be represented with `\t`. This is called a **special character**, and we'll learn more about it next week in stringr.
+
+```{r}
+read_tsv("col1\tcol2\tcol3
+          4\t8\t15
+          16\t23\t42")
+```
+
+## read_table()
+
+> Files where any whitespace is the delimiter can be read with `read_table()`. They often have the extension `.txt`.
+
+* Notice how the amount of whitespace differs between each field; `read_table()` ignores how many spaces there are and just skips right to the next non-space character.
+
+```{r}
+read_table("column1 column2  column3
+           value1     value2          value3")
+```
+
+## read_delim()
+
+* The four cases above: `read_csv()`, `read_csv2()`, `read_tsv()`, and `read_table()` account for the common simple data file types.
+
+* There are other more complicated data forms like the hierarchical JSON and HTML files, and there exist packages with commands to deal with those.
+
+* However, you have the power to read any data file given that it uses one consistent delimiter, with `read_delim()`.
+
+> If you encounter a data file with an uncommon delimiter, you can use `read_delim()`, the general form of all previous `read_*` commands.
+
+* Here's an example where, for some reason, `+` is the delimiter.
+
+```{r}
+read_delim("column1+column2+column3
+           4+8+15
+           16+23+42",
+           delim = "+")
+```
+
+* Just as we represented a tab with `\t`, we can represent a "newline" (or "return", or "enter") with `\n`.
+
+```{r}
+read_delim("column1+column2+column3\n4+8+15\n16+23+42",
+           delim = "+")
+```
+
+## read_excel()
+
+* Next week, we'll be using data from two Excel files.
+
+* Excel files are fundamentally different than the above file types. Because Excel cells can be merged and split in irregular ways, the definitions of columns and rows can get murky.
+
+* However, the `readxl` package includes the function `read_excel` which deals with data like this intelligently; and can also helpfully read data with no such irregularities.
+
+* Assuming you have installed the `readxl` package and loaded it with `library(readxl)` at the top of these lecture notes, you should be able to read in the following data.
+
+* You should see a list of zip codes, starting with 53001, and some mostly missing obesity data.
+
+```{r}
+women = read_excel("../../data/Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Females.xlsx",
+                   sheet = 3,
+                   skip = 5,
+                   na = ".")
+men = read_excel("../../data/Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Males.xlsx",
+                   sheet = 3,
+                   skip = 5,
+                   na = ".")
+
+head(women)
+head(men)
+```
+
+# lubridate - Date Parsing
+
+* `Date` objects in R represent a specific day of a specific month of a specific year.
+
+* From a Date object, we can extract out interesting features such as the day of the week it was, apply date-specific operations such as "add two weeks", and cross-reference it with other date-based information.
+
+* However, R doesn't always recognize which information is meant to be dates, because they can be expressed in many different ways. 
+
+* For example, the date "April 31st, 2001" could be written as:
+    - 4/31/2001
+    - 4-31-2001
+    - 31 April 2001
+    - April 31 2001
+    - 4 31 2001
+    - 31 4 2001
+    - ...and many more unforeseen formats!
+    
+* There are two problems that arise:
+    - Inconsistent formats (slashes, dashes, spaces) make it hard to write a simple conversion function.
+    - Ambiguous dates (does 1/4 represent January 4th or April 1st?) may be incorrectly interpreted by R
+    
+* Often, you need to convert information that was read in as a string to be a Date type.
+
+## Parsing a Date 
+
+> The lubridate functions `dmy()`, `dym()`, `mdy()`, `myd()`, `ydm()`, and `ymd()`, take a provided string and convert it to a Date object, based on the **order of the components in the provided string**.
+
+* The lubridate functions above are extremely flexible, and can handle almost any format of date.
+
+* However, the ambiguous dates problem here means you must have knowledge of how the given date is formatted.
+
+* The order of the components in the provided string determines what function you use.
+
+* If the date is provided in the order **m**onth, **d**ay, **y**ear, you would use `mdy()`.
+    - If it is in the order **y**ear, **m**onth, **d**ay, you would use `ymd()`, and so on.
+    - All six possible orders have their own functions.
+
+```{r}
+date1 = "February 5 2017"
+class(date1) # R doesn't recognize that this is a date
+
+# The order is Month - Day - Year, so we use mdy() to convert it to a Date object
+converted = mdy(date1)
+converted # lubridate will SHOW you dates in the international standard format, year-month-day, but that is irrelevant to the function you pick
+class(converted)
+```
+
+```{r date-from-string-examples}
+date2 = "5-2-2017"
+date3 = "2017, February 5"
+date4 = "Feb. 5, 2017"
+date5 = "02/05/2017"
+date6 = "2.2017.5"
+```
+
+- `date2` could be read as two separate dates, either May 2, 2017 or February 5, 2017.
+
+```{r date-from-string-examples2}
+date2
+dmy(date2)
+mdy(date2)
+```
+
+* Once you have identified the correct function from the order of the components, the lubridate functions will handle the rest.
+
+```{r date-from-string-examples3}
+##
+date3
+ymd(date3)
+##
+date4
+mdy(date4)
+##
+date5
+mdy(date5)
+##
+date6
+myd(date6)
+```
+
+---
+
+##### EXERCISE: Date Parsing Practice
+
+* This exercise will give you practice with basic lubridate functions.
+
+* **Write** code in each chunk to convert each of the following practice date strings into a Date object using a lubridate function.
+
+```{r}
+# This date represents February 3rd, 2024
+practiceDate1 = "2024-3-2"
+
+# ???(practiceDate1)
+```
+
+```{r}
+# This date represents May 4th, 2023
+practiceDate2 = "5.4.24"
+
+# ???(practiceDate2)
+```
+
+```{r}
+# This date represents April 12th, 2002
+practiceDate3 = "12/04/02"
+
+# ???(practiceDate3)
+```
+
+---
+
+## Extracting Components from a Date
+
+- We can extract components of dates from a date-valued object.
+
+```{r date-components}
+test_date = mdy(date1)
+test_date
+```
+
+- The function `year()` extracts the year.
+
+```{r}
+year(test_date)
+```
+
+- The function `month()` extracts the month. See variations if you want the number, an abbreviation of the month, or the full name.
+
+```{r}
+test_date
+month(test_date)
+month(test_date, label=TRUE)
+month(test_date, label=TRUE, abbr=FALSE)
+```
+
+- `day()` extacts the day of the month
+
+```{r}
+test_date
+day(test_date) # day of the month
+```
+
+- `wday()` extracts the day of the week.
+  - note that Sunday is `1`
+  - just like `month()`, you can get an abbreviated day of the week or the full day
+  
+```{r}
+test_date
+wday(test_date) # day of the week
+wday(test_date, label=TRUE)
+wday(test_date, label=TRUE, abbr=FALSE)
+```
+
+- The function `yday()` gets the day of the year.
+- The value is different in the months March and later in leap years compared to non-leap years.
+
+```{r}
+# a leap year
+march_01_2020 = ymd("2020-03-01")
+march_01_2020
+yday(march_01_2020)
+
+# not a leap year
+march_01_2022 = ymd("2022-03-01")
+march_01_2022
+yday(march_01_2022)
+```
+
+---
+
+##### EXERCISE: Predict the Output
+
+* This exercise will reinforce lubridate date parsing and component extraction.
+
+* **Predict** what the following code will produce; then run it and see if you were right!
+
+```{r}
+day(mdy("January 30 24"))
+```
+
+```{r}
+month(dym("1.2024.3"), label = TRUE, abbr = FALSE)
+```
+
+```{r}
+year(ydm("02/03/04"))
+```
+
+---

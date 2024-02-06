@@ -1,0 +1,399 @@
+---
+title: "STAT 240: Airport Case Study"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      error = TRUE, fig.height = 4)
+library(tidyverse)
+library(scales)
+
+## A script to change default colors in ggplot2
+source("../../scripts/viridis.R")
+```
+
+
+# Read in Data
+
+- We can now read in the data from six different airports and combine into a single data set
+- Here, we do this with one line for each data set and then use `bind_rows()` to combine them.
+- Then, we can delete the temporary files
+
+```{r read-csv}
+den = read_csv("../../data/DEN-2018.csv")
+jfk = read_csv("../../data/JFK-2018.csv")
+lax = read_csv("../../data/LAX-2018.csv")
+msp = read_csv("../../data/MSP-2018.csv")
+ord = read_csv("../../data/ORD-2018.csv")
+sfo = read_csv("../../data/SFO-2018.csv")
+
+awt = bind_rows(den, jfk, lax, msp, ord, sfo)
+# awt is at the airport-day-hour level
+
+rm(den, jfk, lax, msp, ord, sfo)
+# rm standing for "remove", deletes the objects we no longer need to free up some computer memory
+```
+
+# Passengers by Terminal
+
+> How many passengers and flights went through each airport-terminal combination (in 2018)? Display this in a summary table, with all the terminals from the most popular airports displayed first, and the next most popular airport's terminals shown second, and so on - with terminals sorted within airport by their number of passengers.
+
+* Note that the `all_total` column represents total passengers within that terminal-day-hour, and `all_flights` represents total flights within that terminal-day-hour. We will need to summarize these columns to the level of airport-terminal.
+
+- Then, **add a column** `total_airport_passengers` which includes the total number of passengers in the corresponding airport across all terminals. *(Note: this column will repeat values for airports with multiple terminals.)*
+
+* Arrange the table by descending order of `total_airport_passengers` (this will sort the airports by most to least international flights) and then break ties by the total number of passengers in that terminal.
+
+* Remove `total_airport_passengers` and print the table.
+
+```{r}
+## airports and terminals
+awt %>%
+  group_by(airport, terminal) %>%
+  summarize(passengers = sum(all_total),
+            flights = sum(all_flights)) %>% 
+  group_by(airport) %>% 
+  mutate(total_airport_passengers = sum(passengers)) %>% 
+  arrange(desc(total_airport_passengers), desc(passengers)) %>% 
+  select(-total_airport_passengers)
+
+### JFK and LAX have five different international terminals
+### The other airports have one or two each.
+```
+
+# Days of Data
+
+> How many unique days of data are there for each airport?
+
+* Problem: We can't just count how many times each airport occurs; because different airports have different numbers of terminals, and each terminal might not necessarily have data for every day-hour.
+
+```{r}
+awt %>% 
+  count(airport)
+```
+
+```{r key-variables-airport-dates}
+## examine date by airport
+awt %>%
+  group_by(airport, date) %>% 
+  summarize() %>% # A shortcut for group_by(airport, date) %>% summarize() is distinct(group_by, summarize)
+  group_by(airport) %>% 
+  summarize(n = n())
+## One date is missing for all the airports
+```
+
+
+
+# Which Date is Missing?
+
+> Identify which date is missing for each airport; is it the same day for each airport?
+
+- One day is missing for each airport!  Can we figure out which one it is?
+- One approach could be to narrow down by:
+    - adding a month variable
+    - counting the number of distinct days within each month
+    - seeing which total is less than the actual number of days
+    - find the distinct days within that month
+- But a more straightforward way as we did with the Madison weather data is to:
+    - create a mini data frame with all possible dates
+    - join with a data summary of the dates and terminals in the data set
+    - see what is missing
+    
+```{r}
+all_dates = tibble(
+  date = seq(ymd("2018-01-01"), ymd("2018-12-31"), 1)
+)
+
+airport_dates = awt %>% distinct(airport, date) # returns all the unique combinations of airport & date which appear in awt
+
+# return all the dates which appear in all_dates that don't appear in airport_dates
+anti_join(all_dates, airport_dates)
+```
+
+
+```{r}
+# Here's how you can manually verify it is the same missing date for each airport; the "rep" command stands for "replicate" or "repeat". We are creating a dataframe with 365*6 rows, one row for each airport-day combination.
+
+## Create a mini temporary data set with all dates in 2018 for each airport code
+temp1 = tibble(
+  date = rep(seq(ymd("2018-01-01"), ymd("2018-12-31"), 1), times = 6),
+  airport = rep(c("DEN", "JFK", "LAX", "MSP", "ORD", "SFO"), each = 365)
+)
+
+## Create another temporary data set with the actual dates and airports in awt
+
+temp2 = awt %>% 
+  select(airport, date) %>% 
+  distinct()
+
+## Use anti_join() to find rows in temp1 not in temp2
+temp1 %>% 
+  anti_join(temp2)
+```
+
+- We see that May 8, 2018, is missing from each airport. Curious!
+- Verify this
+
+```{r}
+## check on May 8
+awt %>%
+  filter(date == "2018-05-08")
+
+### No airports have any data on May 8, 2018.
+```
+
+# Checking Totals
+
+> Does the `all_total` variable match the sum of the other columns of passenger counts?
+
+- Add a column named `check_total` with the sum of the columns which names begin with "all" (except for `all_total`)
+- Compare these totals with that in `all_total`
+
+- Filter `awt` to produce a dataframe with the rows where `check_total`, the manually computed total, does not match `all_total`, the given values.
+
+```{r}
+## check that all_total column matches
+awt = awt %>%
+  mutate(check_total = all_n_0_15 +
+            all_n_16_30 +
+            all_n_31_45 +
+            all_n_46_60 +
+            all_n_61_90 +
+            all_n_91_120 +
+            all_n_120_plus +
+            all_excluded)
+
+table_mismatch = awt %>%
+  filter(all_total != check_total)
+table_mismatch
+```
+
+- There are 44 rows where the totals do not match
+
+# Investigating Mismatches
+
+>  At what time of day and at which airports are these mismatches happening?
+
+
+```{r}
+# Recall: We could have done this with count(airport, hour)
+table_mismatch %>%
+  group_by(airport, hour) %>% 
+  summarize(n = n())
+### All mismatches are between midnight and 1am.
+### Most are at LAX and JFK
+```
+
+> Create a histogram to show the distribution of the size of these mismatches.
+
+```{r}
+ggplot(table_mismatch, aes(x = all_total - check_total)) +
+  geom_histogram(boundary=0, binwidth=5, fill = "red", color = "black")
+```
+
+- In each of the 44 cases where there is a mismatch, the `all_total` variable exceeds the `check_total`
+- This likely means that some of the passengers in the `all_total` column are not included in the specific waiting time counts of passengers.
+- Most of the differences are fewer than five passengers
+- The largest difference is somewhere between 30 and 35
+
+# Busy Months
+
+> Are some months busier than others?
+
+- Begin by adding a month variable and then reordering the columns
+- Also add day and weekday for future use
+
+```{r}
+awt = awt %>% 
+  mutate(month = month(date, label = TRUE),
+         day = day(date),
+         wday = wday(date, label = TRUE)) %>% 
+  relocate(month, day, wday, .after = hour)
+```
+
+- Total the number of passengers by month and sort by that total, descending.
+
+```{r}
+awt %>%
+  group_by(month) %>%
+  summarize(total = sum(all_total)) %>%
+  arrange(desc(total))
+```
+
+- The previous summary is affected by different numbers of days in each month.
+    - A better solution calculates an average number of daily passengers separately for each month
+- Calculate the average daily rate of passengers by month.
+- (Recall that May has only 30 observations.)
+
+- Key idea here is to:
+    - first summarize by date (and month and day):
+    - sum to get daily totals across airport, hours, and terminal
+    - then group by month
+    - calculate means within the month
+
+```{r}
+busy_months = awt %>%
+  group_by(date, month, day) %>%
+  summarize(total = sum(all_total)) %>%
+  group_by(month) %>%
+  summarize(n = n(), total = sum(total)) %>%
+  mutate(daily = total/n) %>% 
+  arrange(desc(daily))
+
+busy_months
+```
+
+> Display these average daily passengers by month in a bar graph.
+
+```{r}
+ggplot(busy_months, aes(x=month, y=daily)) +
+  geom_col(fill = "blue", color = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  xlab("") +
+  ylab("# Daily Arrivals") +
+  ggtitle("Daily International Arrival Totals", subtitle = "at six selected US Airports")
+```
+
+- It looks like the summer months (July, August, June) are the busiest in terms of number of passengers traveling per day for the airports in our data.
+
+# Busy Weekdays
+
+> Are some days of the week busier than others?  
+
+```{r}
+busy_wdays = awt %>%
+  group_by(date, wday) %>%
+  summarize(total = sum(all_total)) %>%
+  group_by(wday) %>%
+  summarize(n=n(), total = sum(total))  %>%
+  mutate(daily=total/n) %>%
+  arrange(desc(daily))
+
+busy_wdays
+
+ggplot(busy_wdays, aes(x = wday, y = daily)) +
+  geom_col(fill = "blue", color = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  xlab("Day of the week") +
+  ylab("Average number of passengers") +
+  ggtitle("Are some days of the week busier than others?")
+```
+
+# Busy Times of the Day
+
+> Are some times during the day busier than others?  
+
+```{r busy-times}
+busy_times = awt %>%
+  group_by(date, hour) %>%
+  summarize(total = sum(all_total)) %>%
+  group_by(hour) %>%
+  summarize(n = n(), total = sum(total))  %>%
+  mutate(hourly = round(total/n,2)) %>%
+  arrange(desc(hourly)) 
+busy_times
+
+ggplot(busy_times, aes(x = hour, y = hourly)) +
+  geom_col(fill = "blue", col = "black") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+  xlab("Time of the day") +
+  ylab("# of passengers") +
+  ggtitle("Average Hourly International Arrivals", subtitle = "at six select US airports")
+
+```
+
+
+# Airport Efficiency
+
+## By Wait Time
+
+> Are some airports more efficient than others in terms of average wait time? Show the distribution of each airport's `all_avg_wait` times with a boxplot.
+
+```{r efficient}
+ggplot(awt, aes(x=airport, y=all_avg_wait)) +
+  geom_boxplot()
+```
+
+- We can adjust the plot by reordering the airports in order by the median of their average waiting time for all passengers.
+- We also add better axis labels
+
+
+```{r}
+awt = awt %>% 
+  mutate(airport = reorder(airport, all_avg_wait, FUN=median))
+## treat airport as a factor with levels ordered according to the median of the all_avg_wait variable
+
+ggplot(awt, aes(x=airport, y=all_avg_wait)) +
+  geom_boxplot() +
+  xlab("Airport") +
+  ylab("Average waiting time for all passengers") +
+  ggtitle("Are some airports more efficient that than others in terms of average wait time?")
+```
+
+- Passengers tend to wait longer on average at San Francisco's airport than the others in this analysis.
+
+> What is the average waiting time at each airport for all passengers?
+
+- To calculate this statistic, we need to sum the waiting times for all passengers and divided by the total number of passengers
+- Note that it is incorrect to calculate the average for each airport/terminal/date/hour and then average these values as the number of passengers in each row is different.
+  - We want to average by passenger, not by row in the data set
+- The strategy is to calculate the total time by all passengers in each row
+  - This is the average time multiplied by the number of passengers
+- Then, sum times and passengers by airport and divide
+
+```{r}
+awt = awt %>% 
+  mutate(total_time = all_total * all_avg_wait)
+
+prob_2 = awt %>% 
+  group_by(airport) %>% 
+  summarize(avg_wait = sum(total_time) / sum(all_total))
+
+prob_2 %>% 
+  arrange(avg_wait)
+```
+
+- Looks like San Francisco is slower than the other airports
+
+## By Passengers Processed Per Booth
+
+> Do airports differ in the number of passengers processed per booth?
+
+- You can filter out rows where `all_booths` is 0.
+- Add a new column, `passengers_per_booth`, which is the ratio of the number of passengers (`all_total`) per booth (`all_booths`)
+- For each airport, compute the minimum, median, and maximum of `passengers_per_booth`; calculate 
+- Print this table, sorted by descending median of `passengers_per_booth` 
+
+```{r}
+awt = awt %>% 
+  mutate(passengers_per_booth = all_total / all_booths)
+
+prob_1 = awt %>% 
+  filter(all_booths > 0) %>% 
+  group_by(airport) %>% 
+  summarize(min = min(passengers_per_booth),
+            median = median(passengers_per_booth),
+            max = max(passengers_per_booth))
+
+prob_1 %>% 
+  arrange(desc(median)) %>% 
+  print(n = Inf, width = Inf)
+```
+
+- MSP has the largest number of passengers per booth
+  - The previous graph showed MSP also had the shortest distribution of waiting times.
+
+> Display the median values in a bar graph
+
+```{r}
+ggplot(prob_1, aes(x = airport, y = median)) +
+  geom_col() +
+  xlab("Airport") +
+  ylab("Passengers per Booth") +
+  ggtitle("Comparison of Median Passengers per Booth",
+          subtitle = "International arrivals for six US Airports")
+```
+
