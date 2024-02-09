@@ -1,0 +1,249 @@
+---
+title: "STAT 240: dplyr Exercise and Practice Solutions"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+library(magrittr)
+```
+
+```{r}
+grocery_prices = read_csv("../../data/grocery-prices.csv")
+grocery_list = read_csv("../../data/grocery-list.csv")
+
+produce = grocery_list %>% 
+  left_join(grocery_prices, by = "item") 
+
+produce = produce %>% 
+    mutate(cost = price * quantity,
+           sales_tax = 0.05 * cost)
+```
+
+
+# Lecture Exercises
+
+##### EXERCISE: Basic Use of the Pipe
+
+```{r}
+# What is this doing?
+sqrt(add(divide_by(30, 10), 6))
+
+# Recreate it with the pipe, with each function on its own line
+30 %>% 
+  divide_by(10) %>% 
+  add(6) %>% 
+  sqrt()
+```
+
+##### EXERCISE: dplyr in Translation
+
+* Real conversations with non-coders will often not use the name of the verb; you will have to take their conversational speech and "translate" it into commands.
+
+* **Choose the correct dplyr function** for each of the following "plain English" requests. If you can, try to imagine what arguments the command would request.
+
+* *"Show me just the fruits."*
+
+```{r}
+produce %>% 
+  filter(type == "fruit")
+```
+
+
+* *"Can you put whether it's a fruit or vegetable at the beginning?"*
+
+```{r}
+produce %>% 
+  relocate(type)
+```
+
+
+* *"I only care about the food name and the total cost, can you get rid of everything else?."*
+
+```{r}
+produce %>% 
+  select(item, cost)
+```
+
+
+* *"Can you put the foods in alphabetical order?"*
+
+```{r}
+produce %>% 
+  arrange(desc(item))
+```
+
+
+* *"Can you give each food a sale price that's half off the normal price?"*
+
+```{r}
+produce %>% 
+  mutate(sale = 0.5 * price)
+```
+
+##### EXERCISE: Will it Group?
+
+```{r}
+produce %>% 
+  #group_by(type) %>% 
+  filter(cost > 2)
+```
+
+- **`filter()` is NOT affected by `group_by`.**
+
+```{r}
+produce %>% 
+  #group_by(type) %>% 
+  mutate(numberOfItems = n()) %>% 
+  relocate(numberOfItems)
+```
+
+- **The behavior of `mutate()` to create a new column of the same length as the existing does not change; but the `n()` expression (or other reducing expression) is instead computed within groups in the presence of `group_by`.**
+
+- **`relocate()` is not affected by `group_by`.**
+
+```{r}
+produce %>%
+  #group_by(type) %>% 
+  summarize(medianCost = median(cost)) %>% 
+  ungroup()
+```
+
+- **The `ungroup()` here is a decoy - it comes after the `summarize()`, and it does not change the behavior of the commands BEFORE it, only AFTER it.**
+
+- **`summarize()` is the command most commonly paired with `group_by()`, it computes summary expressions within groups in the presence of them.**
+
+```{r}
+produce %>% 
+  #group_by(type) %>% 
+  slice_max(quantity, n = 2)
+```
+
+- **`slice_max()` and `slice_min()` will return `n` rows total without grouping, and `n` rows within each group if present.**
+
+# Lecture Questions
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,  message=FALSE, warning=FALSE,
+                      error = TRUE,
+                      fig.height = 4)
+library(tidyverse)
+library(lubridate)
+```
+
+## Read in Data
+
+```{r}
+## read in the data
+official = read_csv("../../data/madison-weather-official-1869-2022.csv")
+```
+
+## Annual Average Temperature
+
+> Create a summary table of the data with the average temperature per year. Then, make an effective plot of this data to show patterns over time and variation around the main pattern.
+
+```{r}
+mw1 = official %>% 
+  ## drop any rows with missing data in tavg
+  drop_na(tavg) %>% 
+  ## use the lubridate function year() to extract the year from the date
+  mutate(year = year(date)) %>% 
+  ## group by year
+  group_by(year) %>% 
+  ## calculate the average temperature by each year
+  summarize(yearlyTemp = mean(tavg))
+
+mw1
+```
+
+```{r}
+ggplot(mw1, aes(x = year, y = yearlyTemp)) +
+  geom_point() +
+  geom_line() +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "Year",
+    y = "Temperature (F)",
+    title = "Madison Average Annual Temperature Over Time",
+    subtitle = "1869-2021"
+  )
+```
+
+## Daily Temperature Records
+
+> For each of the 366 unique days of the year, find the historical date which had the highest maximum temperature on that day of the year. There may be ties, which will lead to slightly more than 366 rows.
+
+```{r}
+official %>% 
+  mutate(year = year(date),
+         month = month(date, label = TRUE),
+         day = day(date)) %>% 
+  group_by(month, day) %>% 
+  slice_max(tavg, n = 1)
+```
+
+## Temperature by 30-year period
+
+> Meteorologists often determine weather norms by averaging over a 30-year period. Create a variable which partitions the data into 30-year periods from 1871-1900, 1901-1930, up to 1991-2020. You can exclude years before 1871 and after 2020.
+
+> Then calculate within each of the twelve months within each period (e.g. 1 row for all Januarys in 1871-1900, 1 row for all Februarys in 1871-1900...) the average, maximum, and minimum of the average temperature.
+
+```{r}
+# Create variables and filter
+prob2 = official %>% 
+  mutate(year = year(date),
+         month = month(date, label = TRUE)) %>% 
+  filter(year > 1870 & year < 2021) %>% 
+  mutate(period30 = case_when(
+    year > 1870 & year <= 1900 ~ "1871-1900",
+    year > 1900 & year <= 1930 ~ "1901-1930",
+    year > 1930 & year <= 1960 ~ "1931-1960",
+    year > 1960 & year <= 1990 ~ "1961-1990",
+    year > 1990 & year <= 2020 ~ "1991-2020"))  
+
+prob2 %>% count(period30) # appears to have worked correctly
+```
+
+```{r}
+# Summarize to the month-period level
+prob2_summarized = prob2 %>% 
+  # Drop those 14 dates with missing tavg
+  drop_na(tavg) %>% 
+  group_by(month, period30) %>% 
+  summarize(minimum = min(tavg), maximum = max(tavg), average = mean(tavg))
+
+prob2_summarized
+```
+
+## Days With Precipitation
+
+> Make a summary table which shows the proportion of days which had any precipitation in each 30-year period + month combination.
+
+```{r}
+# prob2 is the same as official, at the date level, with period30 and month already created
+
+prob4 = prob2 %>% 
+  drop_na(prcp) %>% 
+  group_by(month, period30) %>% 
+  summarize(any_prcp = sum(prcp > 0), 
+            all_days = n(), 
+            percentPrcp = any_prcp/n())
+
+prob4
+  
+```
+
+> With a separate panel for each month, create a column graph of the percentage of precipitation in each 30-year period.
+
+```{r}
+ggplot(prob4, aes(percentPrcp, period30)) +
+  geom_col() +
+  facet_wrap(~month)
+```
+
+
+
+
+
