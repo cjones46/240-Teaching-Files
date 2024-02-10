@@ -1,0 +1,393 @@
+---
+title: "STAT 240: Obesity Case Study"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      error = TRUE)
+
+library(tidyverse)
+library(scales)
+source("../../scripts/viridis.R")
+```
+
+# Overview
+
+## Learning Outcomes
+
+* These lectures will reinforce data manipulation concepts including joining and pivoting through practice on a real case study.
+
+## Preliminaries
+
+- You should have the necessary packages for this lecture from previous ones, including `readxl` and `scales`, but install them with `install.packages("packageName")` if you don't.
+
+## Files
+
+- Files to download to `COURSE/scripts`
+    - `viridis.R`
+    
+- Files to download to `COURSE/lecture/unit5-tidyr`
+    - `week5-obesity.Rmd`
+    - `week5-obesity.html`
+  
+- Files to download to `COURSE/data/`
+  - `obesity.csv`
+  - `wi_urban_rural.csv`
+  
+## Supplementary Material
+
+- Material in these lectures is supplemented by [Chapter 13 in Course Notes and Case Studies](https://bookdown.org/bret_larget/stat-240-case-studies/wisconsin-obesity.html).
+  
+# Wisconsin Obesity Case Study
+
+- We now shift to the case study which examines obesity rates in different zip codes in Wisconsin by age and sex cohorts.
+- A *zip code* is a somewhat small geographic region used by the US Postal Service.
+- Wisconsin contains over 700 zip codes.
+- Individual zip codes do not need to be contained within municipalities (cities, towns, and villages) nor counties.
+
+- This data comes from the Wisconsin Health Atlas; read more in supplementary material.
+
+- This data originally comes in Excel files, and in a much different, less clean form; we have done a great deal of pre-processing for you in `obesity.csv`, which you can read more about in the Supplementary Material.
+
+## Read in Data
+
+```{r}
+obesity = read_csv("../../data/obesity.csv") %>% arrange(zip)
+
+head(obesity)
+```
+
+- The dataset is at the **zip-sex-age** level; one row contains information on the subgroup of individuals who share a combination of zip, sex, and age.
+
+- There are two values for `sex`, male and female (biological at birth), and five `age` categories: "05-17", "18-34", "35-54", "55-74", and "75+".
+    - We do not have information on children younger than 5 years old.
+
+- Therefore, there are ten rows for each zip code.
+
+- There are 774 zip codes from Wisconsin represented in the data set, for a total of $774*5*2 = 7740$ rows.
+
+## Sampling
+
+- The data collectors did not gather data from every zip-sex-age combination, and even if they did, they did not gather data from every single individual in that combination.
+
+- `pop` represents the known overall population of that zip-sex-age combination.
+
+- `n` represents how many individuals the Health Atlas was able to collect data on.
+
+- `obese` represents how many individuals, among those with data, meet the criteria for obesity.
+
+- Looking at the first row of the dataset:
+
+```{r}
+obesity %>% slice(1)
+```
+
+- We do not have obesity data for this zip-sex-age combination.
+
+- Looking at the second row:
+
+```{r}
+obesity %>% slice(2)
+```
+
+- There are 163 individuals in zip code 53001 who are female and in the age range 18-34.
+    - Of those 163, the Atlas was able to collect data on 73 of them.
+    - Of those 73, 20 met the criteria for obesity.
+
+## Caution with Estimation
+
+- We want to use this more granular data to make conclusions about broader age and sex categories; for example, across the whole population of males age 18-34, what percent are obese?
+
+- Some cautious math is needed to avoid reasonable but costly errors.
+
+- For example, if zip code A has:
+  - 1000 men of ages 18-34
+  - a sample size of 100
+  - 20 obese men in the sample
+- Zip code B has:
+  - 10,000 men of ages 18-34
+  - a sample size of 100
+  - 10 obese men in the sample
+  
+- If we want to estimate the proportion of obese men in these two zip codes combined, **the wrong answer** is
+
+$$
+\frac{20 + 10}{100 + 100} = \frac{30}{200} = 0.15
+$$
+- This calculation ignores the different population sizes!
+
+- If 20% of zip code A is obese, that's $1,000 * 20/100 = 200$ obese men out of 1,000.
+
+- If 10% of zip code B is obese, that's $10,000 * 10/100 = 100$ obese men out of 10,000.
+
+- This leads to the overall estimate of:
+
+$$
+\frac{1000 \times (20/100) + 10000 \times (10/100)}{1000 + 10000} =
+\frac{1200}{11000} \doteq 0.109
+$$
+
+- Now our estimate is much closer to the 10% obesity rate observed in the larger zip code than to the 20% rate observed in the smaller zip code.
+
+- This makes more sense than 15%, which ignored the population differences.
+
+  
+# Lecture Questions
+
+## Total State Population
+
+> According to US Census Bureau estimates, the population of Wisconsin was about 5.76 million people in 2015.
+What is the total population of people represented in this data set?
+Why do these values disagree?
+
+
+```{r}
+# Live coding
+wi_pop = 5.76 * 10^6
+```
+
+- The data set does not include children aged 4 years and younger.
+
+## Population by Zip Code
+
+> Calculate the total population within each zip code and store these 774 values in a new data frame.
+
+```{r}
+# Live coding
+```
+
+> Make a box plot of these values.
+
+```{r}
+# Live coding
+```
+
+> Calculate the minimum, lower quartile (0.25 quantile),
+the median, the upper quartile (0.75 quantile),
+and the maximum of these values.
+
+```{r}
+# Live coding
+```
+
+- The data has a very strong right skew.
+- There are a few highly populated zip codes.
+- A typical zip code has just a few thousand people.
+
+## Append Obesity Estimates
+
+> In each row of the dataframe, calculate the estimated total number of obese individuals, based on the calculation from "Caution with Estimation".
+
+> Save that total in a column called `obese_pop`.
+
+> Calculate and save the estimated total number of NON-obese individuals in a column called `non_obese_pop`.
+
+> Make sure to **save the result to the `obesity` dataframe for later use.**
+
+* *Note: These estimates don't have to be whole numbers, they are imperfect estimates based on the sample percentage times the population.*
+
+```{r}
+# Live coding
+```
+
+
+## Overall Obesity Rate
+
+> Estimate the overall proportion of obesity in Wisconsin with the new variable `obese_pop`.
+
+* First, **drop** rows with missing data.
+
+* Then, **add** all of the `obese_pop` values to obtain an estimate of the state-wide obese individual count, and **divide** by the total population, which you will also have to calculate.
+
+```{r}
+# Live coding
+```
+
+## Obesity Rate by Sex
+
+> Repeat the previous problem, but do so separately for females and males.
+
+```{r}
+# Live coding
+```
+
+## Obesity Rate Among Children
+
+> The definition of obesity is different for children than for those aged 18 years and older. Find the obesity rate of children overall, and then separately for female and male children.
+
+```{r}
+# Live coding
+```
+
+```{r}
+# Live coding
+```
+
+
+## Obesity Rate Among Adults
+
+> Find the estimated obesity rate for all Wisconsin adults, and then female and male adults separately.
+
+
+```{r}
+# Live coding
+```
+
+```{r}
+# Live coding
+```
+
+
+## Obesity Rates by Sex and Age
+
+> Create a summary data frame with the estimated obesity rate for each sex and age cohort (so, ten separate estimates in total).
+
+> Plot these estimates with a bar graph with age on the x axis and color to indicate sex. 
+
+> In your `geom`, add `position = "dodge"` to "un-stack" the bars.
+
+
+```{r}
+# Live coding
+```
+
+#### (a)
+
+> Are differences between male and female obesity rates similar for all age groups? If not, can you give a possible reason to explain the difference?
+
+- The 18-34 age group is the only one where females have higher reported obesity rates than males. This may be due to pregnancy artificially increasing weight measurements among females.
+
+#### (b)
+
+> Describe how obesity rates change among men and women as the population ages. What possible factor best explains the difference between obesity rates among those aged 55-74 and those 75 and older, do you think?
+
+- Individuals without obesity are more likely to make it to 75+, so that age group has differentially selected the less obese individuals. Individuals with obesity are less likely to make it to 75+.
+
+# Introduce Rural vs. Urban Data
+
+- Next, we examine a possible association between obesity rates and the rural/urban characterization of zip codes
+- If we had *individual-level data*, we could examine counts of individuals by their obesity status and rural/urban status
+- However, we have *aggregated data* with:
+    - obesity data by zip code, sex, and age range
+    - urban/rural data by zip code (as we will see)
+- In this aggregated data, the zip code is the sampling unit.
+    - An association between obesity prevalence and the rural/urban nature of zip codes would suggest an association between obesity and rural/urban home locations among individuals, but strong and perhaps unrealistic assumptions would be necessary to estimate the difference in obesity prevalence at an individual level.
+
+## Read the Data
+
+- Read the Wisconsin rural/urban data from the file *wi-urban-rural.csv*.
+
+```{r}
+ru = read_csv("../../data/wi_urban_rural.csv")
+
+head(ru)
+```
+
+- The US Census Bureau designates areas as rural or urban based on population density.
+- A single zip code might contain both rural and urban areas.
+
+- This file is at the level of **zip code**. Notice this is more "general" than our obesity data, which was at the **zip-sex-age** level.
+
+- The Wisconsin rural/urban data set we read in has nine columns, but we are only interested in three of these.
+    - `Id2` which is the zip code
+    - `Urban:` which is the total population in that zip code that lives in urban areas
+    - `Rural` which is the total population in that zip code that lives in rural areas
+
+- We `select` only these three columns and we `rename` them.
+
+```{r}
+# The column "Urban:" contains a character, ":", which is not allowed in column names because it has a special meaning in R.
+# We can surround it in backticks ("`", top left of keyboard) to indicate to R we mean the literal character :, not the special operator
+
+ru = ru %>% 
+  select(Id2, `Urban:`, Rural) %>% 
+  rename(zip = Id2,
+         urban = `Urban:`,
+         rural = Rural)
+
+head(ru)
+```
+
+## Merging the Data
+
+- Next, we want to merge the obesity and rural/urban data sets.
+
+- However, the obesity data is at the **zip-sex-age** level, but the rural/urban data is at the **zip** level.
+
+- We can't make the rural/urban data *more* specific, but we can make the obesity data *less* specific and `summarize` up to the level of **zip**.
+
+- Note that the total number of people from the obesity data will be less than from the rural/urban data because:
+    - The obesity data does not include children age 4 years and younger
+    - The rural/urban data was collected in 2017, not 2015
+    - Some people are lost due to censoring data from zip codes where some age/sex cohorts had small counts.
+    
+> Using `group_by` and `summarize`, create an obesity dataframe with one row per zip code, with columns `pop`, `obese_pop`, and `non_obese_pop` summed up to the level of zip.
+
+> **Save the result in `obesity2`.**
+   
+```{r}
+# Live coding
+```
+
+- After dropping missing data, `obesity2` has only 581 of the original 774 zip codes.
+
+> Keeping these 581 zip codes as the "primary" data, append the `urban` and `rural` columns from `ru` using the appropriate `join`.
+
+> **Save the result in `obesity2`.**
+
+```{r}
+# Live coding
+```
+
+
+# Obesity Rate versus Urbanization
+
+> Add columns `p_obese` and `p_non_obese` representing the percentage of obese and non-obese individuals, using `pop` as the denominator.
+
+> Add columns `p_urban` and `p_non_obese` representing the percentage of obese and non-obese individuals, using `urban + rural` as the denominator.
+
+> **Save the result in `obesity2`.**
+
+```{r}
+# Live coding
+```
+    
+> Create a scatter plot with `p_urban` on the x-axis vs. `p_obese` on the y axis. Add a straight trend line.
+
+```{r}
+# Live coding
+```
+
+    
+- Many zipcodes are either 100% urban or 100% rural.
+- There is a tendency for a greater obesity prevalence in more rural zip codes
+- There is considerable variation from zip code to zip code
+- The plot may be improved in many ways:
+    - axis labels and titles
+    - scales
+    - include population data?
+    
+> Make some visual improvements to the graph including:
+
+* Set the `size` aesthetic of the points equal to their `pop`. Make the points rather transparent.
+
+* Using `scale_*_continuous`, set the `labels` argument to `percent_format()`.
+    - Sidenote: We have only ever seen the `labels` argument as a custom vector up to this point. It also takes functions!
+    
+```{r}
+# Live coding
+```
+  
+
+
+
+
+
+
+
+
+
+  

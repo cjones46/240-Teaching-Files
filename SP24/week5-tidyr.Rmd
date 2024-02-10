@@ -116,7 +116,20 @@ left_join(x = drinks, y = discounts, by = join_by(Cafe))
 drinks %>% 
   left_join(discounts, join_by(Cafe))
 ```
-    
+
+##### Sidenote: Syntax for the "by" argument
+
+- You can also use `"columnName"` as the `by` argument; but this requires you to put quotes around a column name, which can be misleading.
+
+- This also makes joining by two columns of different names difficult, which we'll see how to do with `join_by` in a moment.
+
+```{r}
+# Notice the addition of the pipe, and the removal of the arguments names; they are always going to be x, y, by.
+drinks %>% 
+  left_join(discounts, by = "Cafe")
+```
+
+  
 ### right_join
 
 > `right_join(x, y)` keeps all the rows in `y` regardless of matching, and appends columns where possible from `x`.
