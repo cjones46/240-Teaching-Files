@@ -291,8 +291,6 @@ read_delim("column1+column2+column3\n4+8+15\n16+23+42",
 
 ## read_excel()
 
-* Next week, we'll be using data from two Excel files.
-
 * Excel files are fundamentally different than the above file types. Because Excel cells can be merged and split in irregular ways, the definitions of columns and rows can get murky.
 
 * However, the `readxl` package includes the function `read_excel` which deals with data like this intelligently; and can also helpfully read data with no such irregularities.
@@ -300,6 +298,8 @@ read_delim("column1+column2+column3\n4+8+15\n16+23+42",
 * Assuming you have installed the `readxl` package and loaded it with `library(readxl)` at the top of these lecture notes, you should be able to read in the following data.
 
 * You should see a list of zip codes, starting with 53001, and some mostly missing obesity data.
+
+* We will be using a cleaned version of these files next week.
 
 ```{r}
 women = read_excel("../../data/Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Females.xlsx",

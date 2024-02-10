@@ -1711,7 +1711,6 @@ a “newline” (or “return”, or “enter”) with <code>\n</code>.</li>
 <div id="read_excel" class="section level2">
 <h2>read_excel()</h2>
 <ul>
-<li><p>Next week, we’ll be using data from two Excel files.</p></li>
 <li><p>Excel files are fundamentally different than the above file
 types. Because Excel cells can be merged and split in irregular ways,
 the definitions of columns and rows can get murky.</p></li>
@@ -1723,6 +1722,8 @@ loaded it with <code>library(readxl)</code> at the top of these lecture
 notes, you should be able to read in the following data.</p></li>
 <li><p>You should see a list of zip codes, starting with 53001, and some
 mostly missing obesity data.</p></li>
+<li><p>We will be using a cleaned version of these files next
+week.</p></li>
 </ul>
 <div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>women <span class="ot">=</span> <span class="fu">read_excel</span>(<span class="st">&quot;../../data/Obesity+Prevalence+by+ZIP+Code+and+Age+Group,+Females.xlsx&quot;</span>,</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">sheet =</span> <span class="dv">3</span>,</span>
