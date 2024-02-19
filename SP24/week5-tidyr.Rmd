@@ -346,7 +346,7 @@ discounts %>%
 * **Predict** the output of the following filtering joins, then uncomment and run them to see if you were right!
 
 ```{r}
-band_members %>% print(n = 2)
+band_members
 ```
 
 ```{r}
@@ -407,9 +407,9 @@ players_long
 
 > "Tidy" data is data which is stored in the most intuitive and efficient way to convey its information. Tidy data follows these three criteria:
 
-    **1. Each observation has its own row**  
-    **2. Each variable has its own column**
-    **3. Each value has its own cell**
+    1. Each observation has its own row  
+    2. Each variable has its own column
+    3. Each value has its own cell
 
 * This definition **depends on what you consider to be an observation and a variable**. 
 

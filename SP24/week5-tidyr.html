@@ -1884,13 +1884,13 @@ exercise.</p></li>
 <li><p><strong>Predict</strong> the output of the following filtering
 joins, then uncomment and run them to see if you were right!</p></li>
 </ul>
-<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>band_members <span class="sc">%&gt;%</span> <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>band_members</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  band   
 ##   &lt;chr&gt; &lt;chr&gt;  
 ## 1 Mick  Stones 
 ## 2 John  Beatles
-## # ℹ 1 more row</code></pre>
+## 3 Paul  Beatles</code></pre>
 <div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>band_instruments</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  plays 
@@ -1987,9 +1987,9 @@ observation, which dataset format is preferred?</p></li>
 efficient way to convey its information. Tidy data follows these three
 criteria:</p>
 </blockquote>
-<pre><code>**1. Each observation has its own row**  
-**2. Each variable has its own column**
-**3. Each value has its own cell**</code></pre>
+<pre><code>1. Each observation has its own row  
+2. Each variable has its own column
+3. Each value has its own cell</code></pre>
 <ul>
 <li>This definition <strong>depends on what you consider to be an
 observation and a variable</strong>.</li>
