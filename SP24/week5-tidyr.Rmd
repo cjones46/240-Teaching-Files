@@ -178,7 +178,7 @@ discounts2 %>%
   right_join(drinks)
 ```
 
-- The `join_by` function, as the `by` argument, has an easy solution for columns with the same information but different names. `join_by` will accept a pair of the form `columnNameInX = columnNameInY`.
+- The `join_by` function, as the `by` argument, has an easy solution for columns with the same information but different names. `join_by` will accept a pair of the form `columnNameInX == columnNameInY`.
 
 ```{r}
 # discounts2 is "x", the first dataframe (recall how the pipe works), and its column is called Location
@@ -228,26 +228,11 @@ bind_rows(drinks, discounts)
 > `inner_join(x, y)` only keeps those rows which appear in BOTH `x` and `y`.
 
 * Whereas `full_join` keeps ALL rows, regardless of matching, `inner_join` keeps only those rows which match in both dataframes.
-    - Once again, order does not matter in `inner_join`.
+    - Once again, order does not matter in `inner_join`. (Though in this example, the order manifests itself in the names of `Row.x` and `Row.y`.)
 
 ```{r}
 drinks %>% 
   inner_join(discounts, join_by(Cafe))
-```
-
-* Recall that in `full_join`, rows which completely matched had no missing data; and rows which matched only in one variable had some missing data.
-
-```{r}
-drinks %>% 
-  full_join(discounts, join_by(Cafe))
-```
-
-* In this sense, `inner_join` can be replicated by doing a `full_join`, and then getting rid of any rows with `NA` values anywhere.
-
-```{r}
-drinks %>% 
-  full_join(discounts, join_by(Cafe)) %>% 
-  drop_na()
 ```
 
 
@@ -272,7 +257,7 @@ band_members
 - In particular: **How many rows will there be? What will the column names be? Will there be any NA values?**
 
 ```{r}
-# left_join(band_instruments, band_members, join_by(name))
+left_join(band_instruments, band_members, join_by(name))
 ```
 
 ```{r}
@@ -282,7 +267,7 @@ band_members
 ```{r}
 # I did not specify a join_by(). Will it still work? Which column(s) will it match by default?
 
-# inner_join(band_instruments, band_members)
+inner_join(band_instruments, band_members)
 ```
 
 > Technical takeaway: The various `join` commands keep rows or columns in various different ways, sometimes filling in missing values with NA or sometimes getting rid of those rows entirely.
@@ -361,7 +346,7 @@ discounts %>%
 * **Predict** the output of the following filtering joins, then uncomment and run them to see if you were right!
 
 ```{r}
-band_members
+band_members %>% print(n = 2)
 ```
 
 ```{r}
@@ -369,16 +354,16 @@ band_instruments
 ```
 
 ```{r}
-#semi_join(band_members, band_instruments, join_by(name))
+semi_join(band_members, band_instruments, join_by(name))
 ```
 
 ```{r}
 # Switched order of band_instruments and band_members
-#semi_join(band_instruments, band_members, join_by(name))
+semi_join(band_instruments, band_members, join_by(name))
 ```
 
 ```{r}
-#anti_join(band_instruments, band_members, join_by(name))
+anti_join(band_members, band_instruments, join_by(name))
 ```
 
 

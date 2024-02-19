@@ -1609,7 +1609,7 @@ had in both dataframes. <code>Row == 3</code> matched “The Roast” with
 <li>The <code>join_by</code> function, as the <code>by</code> argument,
 has an easy solution for columns with the same information but different
 names. <code>join_by</code> will accept a pair of the form
-<code>columnNameInX = columnNameInY</code>.</li>
+<code>columnNameInX == columnNameInY</code>.</li>
 </ul>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># discounts2 is &quot;x&quot;, the first dataframe (recall how the pipe works), and its column is called Location</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># drinks is &quot;y&quot;, the second dataframe, and its column is called &quot;Cafe&quot;.</span></span>
@@ -1701,40 +1701,13 @@ BOTH <code>x</code> and <code>y</code>.</p>
 matching, <code>inner_join</code> keeps only those rows which match in
 both dataframes.
 <ul>
-<li>Once again, order does not matter in <code>inner_join</code>.</li>
+<li>Once again, order does not matter in <code>inner_join</code>.
+(Though in this example, the order manifests itself in the names of
+<code>Row.x</code> and <code>Row.y</code>.)</li>
 </ul></li>
 </ul>
 <div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
-<pre><code>## # A tibble: 3 × 6
-##   Row.x Drink    Cafe        Price Row.y Coupon
-##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;       &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
-## 1     1 Milk Tea Happy Tea       4     1 25%   
-## 2     2 Espresso Daily Grind     2     2 50%   
-## 3     3 Latte    Daily Grind     3     2 50%</code></pre>
-<ul>
-<li>Recall that in <code>full_join</code>, rows which completely matched
-had no missing data; and rows which matched only in one variable had
-some missing data.</li>
-</ul>
-<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">full_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
-<pre><code>## # A tibble: 5 × 6
-##   Row.x Drink    Cafe            Price Row.y Coupon
-##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;           &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
-## 1     1 Milk Tea Happy Tea           4     1 25%   
-## 2     2 Espresso Daily Grind         2     2 50%   
-## 3     3 Latte    Daily Grind         3     2 50%   
-## 4     4 Espresso Bev&#39;s Beverages     2    NA &lt;NA&gt;  
-## 5    NA &lt;NA&gt;     The Roast          NA     3 5%</code></pre>
-<ul>
-<li>In this sense, <code>inner_join</code> can be replicated by doing a
-<code>full_join</code>, and then getting rid of any rows with
-<code>NA</code> values anywhere.</li>
-</ul>
-<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">full_join</span>(discounts, <span class="fu">join_by</span>(Cafe)) <span class="sc">%&gt;%</span> </span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 6
 ##   Row.x Drink    Cafe        Price Row.y Coupon
 ##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;       &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
@@ -1752,14 +1725,14 @@ ways.</p></li>
 two dataframes built into <code>dplyr</code> specifically for you to
 practice joining.</p></li>
 </ul>
-<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>band_instruments</span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>band_instruments</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  plays 
 ##   &lt;chr&gt; &lt;chr&gt; 
 ## 1 John  guitar
 ## 2 Paul  bass  
 ## 3 Keith guitar</code></pre>
-<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>band_members</span></code></pre></div>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>band_members</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  band   
 ##   &lt;chr&gt; &lt;chr&gt;  
@@ -1773,11 +1746,22 @@ you were right!</p></li>
 <li><p>In particular: <strong>How many rows will there be? What will the
 column names be? Will there be any NA values?</strong></p></li>
 </ul>
-<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># left_join(band_instruments, band_members, join_by(name))</span></span></code></pre></div>
-<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># full_join(band_instruments, band_members, join_by(name))</span></span></code></pre></div>
-<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># I did not specify a join_by(). Will it still work? Which column(s) will it match by default?</span></span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="co"># inner_join(band_instruments, band_members)</span></span></code></pre></div>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">left_join</span>(band_instruments, band_members, <span class="fu">join_by</span>(name))</span></code></pre></div>
+<pre><code>## # A tibble: 3 × 3
+##   name  plays  band   
+##   &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;  
+## 1 John  guitar Beatles
+## 2 Paul  bass   Beatles
+## 3 Keith guitar &lt;NA&gt;</code></pre>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># full_join(band_instruments, band_members, join_by(name))</span></span></code></pre></div>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># I did not specify a join_by(). Will it still work? Which column(s) will it match by default?</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="fu">inner_join</span>(band_instruments, band_members)</span></code></pre></div>
+<pre><code>## # A tibble: 2 × 3
+##   name  plays  band   
+##   &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;  
+## 1 John  guitar Beatles
+## 2 Paul  bass   Beatles</code></pre>
 <blockquote>
 <p>Technical takeaway: The various <code>join</code> commands keep rows
 or columns in various different ways, sometimes filling in missing
@@ -1815,8 +1799,8 @@ argument.</p>
 add any columns from <code>y</code>.</p></li>
 <li><p>For example: which drinks do I have a discount for?</p></li>
 </ul>
-<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 4
 ##     Row Drink    Cafe        Price
 ##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;       &lt;dbl&gt;
@@ -1837,8 +1821,8 @@ similar structured dataframe; however:</p>
 indicate which dataframe they are from</li>
 </ul></li>
 </ul>
-<div class="sourceCode" id="cb48"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 6
 ##   Row.x Drink    Cafe        Price Row.y Coupon
 ##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;       &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
@@ -1852,8 +1836,8 @@ indicate which dataframe they are from</li>
 rows which have a match.</p></li>
 <li><p>Which of my coupons apply to cafes that I go to?</p></li>
 </ul>
-<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>discounts <span class="sc">%&gt;%</span> </span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(drinks, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
+<div class="sourceCode" id="cb48"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>discounts <span class="sc">%&gt;%</span> </span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(drinks, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
 <pre><code>## # A tibble: 2 × 3
 ##     Row Coupon Cafe       
 ##   &lt;int&gt; &lt;chr&gt;  &lt;chr&gt;      
@@ -1875,8 +1859,8 @@ which do NOT match anything in <code>y</code> according to the
 <ul>
 <li>Which drinks do I NOT have a coupon for?</li>
 </ul>
-<div class="sourceCode" id="cb52"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>drinks <span class="sc">%&gt;%</span> </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(discounts, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
 <pre><code>## # A tibble: 1 × 4
 ##     Row Drink    Cafe            Price
 ##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;           &lt;dbl&gt;
@@ -1884,8 +1868,8 @@ which do NOT match anything in <code>y</code> according to the
 <ul>
 <li>Which of my coupons do NOT apply to places I go to?</li>
 </ul>
-<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>discounts <span class="sc">%&gt;%</span> </span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(drinks, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
+<div class="sourceCode" id="cb52"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>discounts <span class="sc">%&gt;%</span> </span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(drinks, <span class="fu">join_by</span>(Cafe))</span></code></pre></div>
 <pre><code>## # A tibble: 1 × 3
 ##     Row Coupon Cafe     
 ##   &lt;int&gt; &lt;chr&gt;  &lt;chr&gt;    
@@ -1900,24 +1884,38 @@ exercise.</p></li>
 <li><p><strong>Predict</strong> the output of the following filtering
 joins, then uncomment and run them to see if you were right!</p></li>
 </ul>
-<div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>band_members</span></code></pre></div>
+<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>band_members <span class="sc">%&gt;%</span> <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  band   
 ##   &lt;chr&gt; &lt;chr&gt;  
 ## 1 Mick  Stones 
 ## 2 John  Beatles
-## 3 Paul  Beatles</code></pre>
-<div class="sourceCode" id="cb58"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>band_instruments</span></code></pre></div>
+## # ℹ 1 more row</code></pre>
+<div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>band_instruments</span></code></pre></div>
 <pre><code>## # A tibble: 3 × 2
 ##   name  plays 
 ##   &lt;chr&gt; &lt;chr&gt; 
 ## 1 John  guitar
 ## 2 Paul  bass  
 ## 3 Keith guitar</code></pre>
-<div class="sourceCode" id="cb60"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co">#semi_join(band_members, band_instruments, join_by(name))</span></span></code></pre></div>
-<div class="sourceCode" id="cb61"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Switched order of band_instruments and band_members</span></span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="co">#semi_join(band_instruments, band_members, join_by(name))</span></span></code></pre></div>
-<div class="sourceCode" id="cb62"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co">#anti_join(band_instruments, band_members, join_by(name))</span></span></code></pre></div>
+<div class="sourceCode" id="cb58"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">semi_join</span>(band_members, band_instruments, <span class="fu">join_by</span>(name))</span></code></pre></div>
+<pre><code>## # A tibble: 2 × 2
+##   name  band   
+##   &lt;chr&gt; &lt;chr&gt;  
+## 1 John  Beatles
+## 2 Paul  Beatles</code></pre>
+<div class="sourceCode" id="cb60"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Switched order of band_instruments and band_members</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a><span class="fu">semi_join</span>(band_instruments, band_members, <span class="fu">join_by</span>(name))</span></code></pre></div>
+<pre><code>## # A tibble: 2 × 2
+##   name  plays 
+##   &lt;chr&gt; &lt;chr&gt; 
+## 1 John  guitar
+## 2 Paul  bass</code></pre>
+<div class="sourceCode" id="cb62"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anti_join</span>(band_members, band_instruments, <span class="fu">join_by</span>(name))</span></code></pre></div>
+<pre><code>## # A tibble: 1 × 2
+##   name  band  
+##   &lt;chr&gt; &lt;chr&gt; 
+## 1 Mick  Stones</code></pre>
 <blockquote>
 <p>Technical takeaway: Reinforce definitions of <code>semi_join</code>
 returning rows of <code>x</code> which match <code>y</code> by the
@@ -1954,23 +1952,23 @@ ways.</p></li>
 <li><p>If we consider <strong>a single player</strong> to be an
 observation, which dataset format is preferred?</p></li>
 </ul>
-<div class="sourceCode" id="cb63"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>players <span class="ot">=</span> <span class="fu">tibble</span>(</span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">player =</span> <span class="fu">c</span>(<span class="st">&quot;Erling Haaland&quot;</span>, <span class="st">&quot;Kevin De Bruyne&quot;</span>),</span>
-<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">goals =</span> <span class="fu">c</span>(<span class="dv">36</span>, <span class="dv">7</span>),</span>
-<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">assists =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">16</span>),</span>
-<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">games =</span> <span class="fu">c</span>(<span class="dv">35</span>, <span class="dv">32</span>)</span>
-<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
+<div class="sourceCode" id="cb64"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>players <span class="ot">=</span> <span class="fu">tibble</span>(</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">player =</span> <span class="fu">c</span>(<span class="st">&quot;Erling Haaland&quot;</span>, <span class="st">&quot;Kevin De Bruyne&quot;</span>),</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">goals =</span> <span class="fu">c</span>(<span class="dv">36</span>, <span class="dv">7</span>),</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">assists =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">16</span>),</span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">games =</span> <span class="fu">c</span>(<span class="dv">35</span>, <span class="dv">32</span>)</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
 <pre><code>## # A tibble: 2 × 4
 ##   player          goals assists games
 ##   &lt;chr&gt;           &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
 ## 1 Erling Haaland     36       8    35
 ## 2 Kevin De Bruyne     7      16    32</code></pre>
-<div class="sourceCode" id="cb65"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>players_long <span class="ot">=</span> players <span class="sc">%&gt;%</span> </span>
-<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player)</span>
-<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
+<div class="sourceCode" id="cb66"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>players_long <span class="ot">=</span> players <span class="sc">%&gt;%</span> </span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player)</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2044,8 +2042,8 @@ length of the vector in that cell, and <code>chr</code> means
 <code>character</code>; referring to the type of objects within those
 vectors.</p></li>
 </ul>
-<div class="sourceCode" id="cb68"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
-<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(name, films)</span></code></pre></div>
+<div class="sourceCode" id="cb69"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(name, films)</span></code></pre></div>
 <pre><code>## # A tibble: 87 × 2
 ##    name               films    
 ##    &lt;chr&gt;              &lt;list&gt;   
@@ -2069,9 +2067,9 @@ see the individual values.</p></li>
 <li><p>We can <code>pull</code> the films column out to see more about
 how it is structured.</p></li>
 </ul>
-<div class="sourceCode" id="cb70"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
-<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>() <span class="sc">%&gt;%</span> <span class="co"># head() is here so we only look at the first 6 instead of all 87</span></span>
-<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(films)</span></code></pre></div>
+<div class="sourceCode" id="cb71"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>() <span class="sc">%&gt;%</span> <span class="co"># head() is here so we only look at the first 6 instead of all 87</span></span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(films)</span></code></pre></div>
 <pre><code>## [[1]]
 ## [1] &quot;A New Hope&quot;              &quot;The Empire Strikes Back&quot;
 ## [3] &quot;Return of the Jedi&quot;      &quot;Revenge of the Sith&quot;    
@@ -2106,22 +2104,22 @@ as multiple movies occupy the same cell in the table.</p></li>
 cell contains TRUE if that character (row) appears in that film
 (column), and FALSE otherwise.</p></li>
 </ul>
-<div class="sourceCode" id="cb72"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &quot;list-column&quot; data like films requires some un-intuitive adjustments that we don&#39;t teach, like rowwise()</span></span>
-<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a><span class="co"># The %in% logical operator returns TRUE if the value on the left is contained in the vector on the right, and FALSE if it is not contained in the vector on the right</span></span>
-<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
-<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">%&gt;%</span> </span>
-<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">aNewHope =</span> <span class="st">&quot;A New Hope&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">empire =</span> <span class="st">&quot;The Empire Strikes Back&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">rotj =</span> <span class="st">&quot;Return of the Jedi&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rots =</span> <span class="st">&quot;Revenge of the Sith&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">force =</span> <span class="st">&quot;The Force Awakens&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">menace =</span> <span class="st">&quot;The Phantom Menace&quot;</span> <span class="sc">%in%</span> films,</span>
-<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">clones =</span> <span class="st">&quot;Attack of the Clones&quot;</span> <span class="sc">%in%</span> films</span>
-<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
-<span id="cb72-16"><a href="#cb72-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(name, aNewHope<span class="sc">:</span>clones)</span></code></pre></div>
+<div class="sourceCode" id="cb73"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &quot;list-column&quot; data like films requires some un-intuitive adjustments that we don&#39;t teach, like rowwise()</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a><span class="co"># The %in% logical operator returns TRUE if the value on the left is contained in the vector on the right, and FALSE if it is not contained in the vector on the right</span></span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>starwars <span class="sc">%&gt;%</span> </span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">aNewHope =</span> <span class="st">&quot;A New Hope&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">empire =</span> <span class="st">&quot;The Empire Strikes Back&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">rotj =</span> <span class="st">&quot;Return of the Jedi&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rots =</span> <span class="st">&quot;Revenge of the Sith&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-12"><a href="#cb73-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">force =</span> <span class="st">&quot;The Force Awakens&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-13"><a href="#cb73-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">menace =</span> <span class="st">&quot;The Phantom Menace&quot;</span> <span class="sc">%in%</span> films,</span>
+<span id="cb73-14"><a href="#cb73-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">clones =</span> <span class="st">&quot;Attack of the Clones&quot;</span> <span class="sc">%in%</span> films</span>
+<span id="cb73-15"><a href="#cb73-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb73-16"><a href="#cb73-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(name, aNewHope<span class="sc">:</span>clones)</span></code></pre></div>
 <pre><code>## # A tibble: 87 × 8
 ## # Rowwise: 
 ##    name               aNewHope empire rotj  rots  force menace clones
@@ -2173,7 +2171,7 @@ back to our Manchester City data from the Tidy Data section.</p></li>
 <li><p>The <code>players</code> dataset has one row per player, with
 information about those players stored across columns.</p></li>
 </ul>
-<div class="sourceCode" id="cb74"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
+<div class="sourceCode" id="cb75"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
 <pre><code>## # A tibble: 2 × 4
 ##   player          goals assists games
 ##   &lt;chr&gt;           &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
@@ -2183,7 +2181,7 @@ information about those players stored across columns.</p></li>
 <li>Instead of one row per player, we could alternatively store the
 exact same data as one row for each player-statistic.</li>
 </ul>
-<div class="sourceCode" id="cb76"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
+<div class="sourceCode" id="cb77"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2227,7 +2225,7 @@ columns to pivot into two longer columns.</p>
 <li>Let’s dive into pivoting <code>players</code> to its longer
 version.</li>
 </ul>
-<div class="sourceCode" id="cb78"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
+<div class="sourceCode" id="cb79"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>players</span></code></pre></div>
 <pre><code>## # A tibble: 2 × 4
 ##   player          goals assists games
 ##   &lt;chr&gt;           &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
@@ -2250,8 +2248,8 @@ columns:</p>
 <li><code>value</code> contains the old column values</li>
 </ul></li>
 </ul>
-<div class="sourceCode" id="cb80"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
-<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(goals, assists, games))</span></code></pre></div>
+<div class="sourceCode" id="cb81"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(goals, assists, games))</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2270,9 +2268,9 @@ every single column.</p></li>
 <code>-columnName</code> or
 <code>-c(columnName1, columnName2...)</code>.</p></li>
 </ul>
-<div class="sourceCode" id="cb82"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pivot &quot;every column except&quot; player</span></span>
-<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
-<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player)</span></code></pre></div>
+<div class="sourceCode" id="cb83"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pivot &quot;every column except&quot; player</span></span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
+<span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player)</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2287,8 +2285,8 @@ every single column.</p></li>
 specify every column between and including the specified two. (This is a
 useful trick that isn’t limited to just the pivoting commands!)</li>
 </ul>
-<div class="sourceCode" id="cb84"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
-<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(goals<span class="sc">:</span>games)</span></code></pre></div>
+<div class="sourceCode" id="cb85"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(goals<span class="sc">:</span>games)</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2309,8 +2307,8 @@ offers you the opportunity to rename them with some simple arguments:
 <li><p>These are <strong>optional</strong>, and just save you a quick
 call to <code>rename()</code></p></li>
 </ul>
-<div class="sourceCode" id="cb86"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
-<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player, <span class="at">names_to =</span> <span class="st">&quot;type&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;amount&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb87"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a>players <span class="sc">%&gt;%</span> </span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>player, <span class="at">names_to =</span> <span class="st">&quot;type&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;amount&quot;</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          type    amount
 ##   &lt;chr&gt;           &lt;chr&gt;    &lt;dbl&gt;
@@ -2333,7 +2331,7 @@ populate those new columns.</p>
 <li>Let’s pivot the longer version of <code>players</code> back into its
 original, wider form.</li>
 </ul>
-<div class="sourceCode" id="cb88"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
+<div class="sourceCode" id="cb89"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>players_long</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 3
 ##   player          name    value
 ##   &lt;chr&gt;           &lt;chr&gt;   &lt;dbl&gt;
@@ -2353,8 +2351,8 @@ argument.</p></li>
 column currently called <code>value</code>; which we will pass to the
 <code>values_from</code> argument.</p></li>
 </ul>
-<div class="sourceCode" id="cb90"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>players_long <span class="sc">%&gt;%</span> </span>
-<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> name, <span class="at">values_from =</span> value)</span></code></pre></div>
+<div class="sourceCode" id="cb91"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>players_long <span class="sc">%&gt;%</span> </span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> name, <span class="at">values_from =</span> value)</span></code></pre></div>
 <pre><code>## # A tibble: 2 × 4
 ##   player          goals assists games
 ##   &lt;chr&gt;           &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
@@ -2370,7 +2368,7 @@ data and writing pivoting commands of your own.</p></li>
 built-in dataframes on tuberculosis cases from the World Health
 Organization.</p></li>
 </ul>
-<div class="sourceCode" id="cb92"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a>table1</span></code></pre></div>
+<div class="sourceCode" id="cb93"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a>table1</span></code></pre></div>
 <pre><code>## # A tibble: 6 × 4
 ##   country      year  cases population
 ##   &lt;chr&gt;       &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;
@@ -2380,7 +2378,7 @@ Organization.</p></li>
 ## 4 Brazil       2000  80488  174504898
 ## 5 China        1999 212258 1272915272
 ## 6 China        2000 213766 1280428583</code></pre>
-<div class="sourceCode" id="cb94"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a>table2</span></code></pre></div>
+<div class="sourceCode" id="cb95"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a>table2</span></code></pre></div>
 <pre><code>## # A tibble: 12 × 4
 ##    country      year type            count
 ##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;           &lt;dbl&gt;
@@ -2403,14 +2401,14 @@ Organization.</p></li>
 <code>table1</code> and produces <code>table2</code> (bonus points if
 you match the column names!)</p></li>
 </ul>
-<div class="sourceCode" id="cb96"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="co"># table1 %&gt;% </span></span>
-<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># pivot_???()</span></span></code></pre></div>
+<div class="sourceCode" id="cb97"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a><span class="co"># table1 %&gt;% </span></span>
+<span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># pivot_???()</span></span></code></pre></div>
 <ul>
 <li><strong>Write</strong> a pivoting command which starts with
 <code>table2</code> and produces <code>table1</code>.</li>
 </ul>
-<div class="sourceCode" id="cb97"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a><span class="co"># table2 %&gt;% </span></span>
-<span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># pivot_???()</span></span></code></pre></div>
+<div class="sourceCode" id="cb98"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="co"># table2 %&gt;% </span></span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># pivot_???()</span></span></code></pre></div>
 <blockquote>
 <p>Technical takeaway: This exercise is meant to reinforce the concept
 that <code>pivot_wider()</code> and <code>pivot_longer()</code> are
