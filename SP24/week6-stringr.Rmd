@@ -1,0 +1,807 @@
+---
+title: "STAT 240: stringr"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=T,message=F,warning=F)
+library(tidyverse)
+```
+
+# Overview
+
+## Learning Outcomes
+
+* These lectures will teach you how to:
+    - Interact with and manipulate string data using `stringr`
+    - Read and write regular expressions at a basic level
+
+## Preliminaries
+
+- Files to download to `COURSE/lecture/unit06-stringr`
+    - `week6-stringr.Rmd`
+    - `week6-stringr.html`
+    
+- Files to download to `COURSE/data`:
+    - `exoplanet-confirmed_2022-09-12.csv` (You likely already have this from Discussion 2)
+    
+# stringr: Simple Functions for Common String Operations
+
+- We have seen **string** data often in this class, but we have always worked "around" it, never manipulating them or interacting with them directly.
+
+- The base R functions are somewhat hard to remember, hard to use, and don't apply well to dataframes.
+
+- `tidyverse` contains the package `stringr`, which contains a suite of helpful functions for common string operations, optimized for dataframes - we will explore these functions in this lecture series!
+
+- See the cheatsheet for these [here](https://evoldyn.gitlab.io/evomics-2018/ref-sheets/R_strings.pdf).
+
+- We will first see the `str_` functions' basic use, and then show their wide utility when combined with a sub-language called **regular expressions**.
+
+
+## Data
+
+- We create a simple data frame consisting of the built in names in R.
+    - `colors()` creates a vector of color names
+    - `seq_along()` creates a sequence from 1 to the length of the argument, which should be a vector.
+
+```{r}
+df_colors = tibble(
+  index = seq_along(colors()),
+  colors = colors())
+
+df_colors
+```
+
+## The "Observer" Functions: str_detect, str_count, and str_length
+
+> The "observer" functions, `str_detect`, `str_count`, and `str_length`, don't give you back any part of the string; they just observe the string and tell you something useful about it.
+
+*Note: When I describe the types of string function, such as "observer", that's just how I think of it. It's not a technical term and you don't have to remember it, but if it helps, it helps!*
+
+### str_detect
+
+> `str_detect(string, pattern)` returns `TRUE` or `FALSE` indicating if `string` contains `pattern`.
+
+* For all of these string function definitions, `string` can be a single string, or a vector of strings,
+
+```{r}
+# As a single string: does "watermelon" contain "melon"?
+str_detect("watermelon", "melon")
+```
+
+
+```{r}
+# Element-wise on a vector of strings; for each of the first six colors, do they contain "white"?
+firstSixColors = head(colors())
+firstSixColors
+
+str_detect(firstSixColors, "white")
+```
+
+- Our string data is often embedded in a column in a dataframe, so we will use these commands within `dplyr` commands like `mutate()` and `filter()`.
+
+- `str_detect()` is particularly helpful within `filter()` since it is returning a vector of `TRUE` and `FALSE`.
+
+```{r}
+df_colors %>% 
+  filter(str_detect(colors, "white"))
+```
+
+### str_count
+
+> `str_count(string, pattern)` returns an integer count of how many times `string` contains `pattern`.
+
+* How many times does each color contain the letter "a"?
+
+```{r}
+df_colors %>% 
+  mutate(howManyAs = str_count(colors, "a"))
+```
+
+* Which color has the most "e"'s?
+
+```{r}
+df_colors %>% 
+  mutate(howManyEs = str_count(colors, "e")) %>% 
+  slice_max(howManyEs, n = 1)
+```
+
+### str_length
+
+  > `str_length(string)` returns the number of characters in `string`; its length.
+
+* What are the 5+ longest color names?
+
+```{r}
+df_colors %>% 
+  mutate(length = str_length(colors)) %>% 
+  slice_max(length, n = 5)
+```
+
+* Of the 8-letter color names, what are the alphabetically first and last, and how many are there?
+
+```{r}
+df_colors %>% 
+  filter(str_length(colors) == 8) %>% 
+  summarize(first = min(colors), last = max(colors), n = n())
+```
+
+---
+
+##### EXERCISE: Practice the "Observer" Functions
+
+* This exercise will reinforce the observer string functions by having students practice on questions of intermediate difficulty. 
+
+* Using `df_colors`, **write code** to answer the following questions:
+
+* Of the color names which contain at least two instances of "s",
+    - Hint: This is like the `str_length` last example, except for the `str_*` command itself.
+
+```{r}
+# Answer here
+```
+
+* How many colors contain "ee"?
+    - Hint: We have seen counting logical conditions before with `sum(is.na())`... 
+
+```{r}
+# Answer here
+```
+
+* What is the shortest color name (or names, if there are ties) that contains a "y"?
+
+```{r}
+# Answer here
+```
+
+---
+
+## The "Pull" Functions: str_extract and str_sub
+
+> The "pull" functions, `str_extract` and `str_sub`, return a specific part out from within a string.
+
+### str_extract
+
+> `str_extract(string, pattern)` returns whatever part of `string` matched `pattern`, if any, or NA otherwise.
+
+* This command seems a little silly when we just match a literal pattern:
+
+```{r}
+df_colors %>% 
+  mutate(notInteresting = str_extract(colors, "white")) %>% 
+  head()
+```
+
+* This is true of all `str_` commands, but particularly this one - it becomes much more helpful when we introduce regular expressions.
+
+* Here's a sneak preview: the regular expression `"[aeiou]{2}"` stands for a vowel, and then another vowel, which is allowed but not required to be different.
+
+*Note: in these notes, "vowel" will refer to just the letters a, e, i, o, and u; never y.*
+
+```{r}
+df_colors %>% 
+  mutate(twoVowels = str_extract(colors, "[aeiou]{2}"))
+```
+
+### str_sub
+
+> `str_sub(string, start, end)` returns a subsection of `string`, beginning with and including the letter in position `start`, and ending with and including the letter in position `end`.
+
+* Basic use example: extract the subsection of the string including and between the third and fifth character.
+
+```{r}
+# Notice the behavior of an "out-of-bounds" index on pear; it doesn't freak out, it just stops when the string is over
+str_sub(c("apple", "orange", "pear"), 3, 5)
+```
+
+* Extension: The use of negative numbers counts from the back of the string, no matter how long it is!
+
+```{r}
+# Start with the second character, end at the second-to-last character
+str_sub(c("apple", "orange", "pear"), 2, -2)
+```
+
+* More complex use on a dataframe, or more specifically a vector within it
+
+```{r}
+# Notice that putting the same number in str_sub for start and end just extracts that one letter
+df_colors %>% 
+  mutate(firstLetter = str_sub(colors, 1, 1),
+         lastLetter = str_sub(colors, -1, -1))
+```
+
+* Application: What's the most common second letter for R colors?
+
+```{r}
+df_colors %>% 
+  mutate(secondLetter = str_sub(colors, 2, 2)) %>% 
+  count(secondLetter)
+```
+
+* "r" is the most common second letter because there are 100 versions of "gray", and each of them exists with both spellings "gray" and "grey".
+
+## The "Edit" Functions: str_c, str_replace, and str_to_*
+
+> The "edit" functions, `str_c`, `str_replace`, and `str_to_*` all return a new modified string based on the old ones.
+
+### str_c
+
+> `str_c(arg1, arg2, ...)` takes many string arguments and combines them: either elementwise into a vector of strings, or into a single "collapsed" string.
+
+* Recall: vector arithmetic is R's internal system for handling combinations of vectors of unequal sizes.
+  - In shorter terms, it is the reason `c(1, 2, 3) + 5` ends up as `1+5, 2+5, 3+5`.
+
+
+```{r}
+# The default behavior: Combine two vectors of strings element-wise
+
+fruits = c("apple", "orange", "pear")
+veggies = c("broccoli", "green beans", "peas")
+
+str_c(fruits, veggies)
+```
+
+* You can add the `sep` argument to control the separator (by default nothing, technically `""`) between the combined elements of each vector.
+
+```{r}
+str_c(fruits, veggies, sep = " and ")
+```
+
+* Additionally, if you add the `collapse` argument, the input vector of strings will be "collapsed" down to a single one. The value of the `collapse` argument will be inserted between each original element.
+    - This is fundamentally VERY different than the above use.
+
+```{r}
+# Notice: this is just one string, not a vector
+str_c(fruits, collapse = ", ")
+```
+
+* Here's an example on a dataframe:
+
+```{r}
+# rev() stands for reverse(), and just returns the "backwards" version of a vector.
+df_colors_augmented = df_colors %>% 
+  mutate(reverse_colors = rev(colors))
+
+df_colors_augmented
+```
+
+```{r}
+df_colors_augmented %>% 
+  mutate(pair = str_c(colors, reverse_colors, sep = " or ")) %>% 
+  relocate(pair)
+```
+
+
+### str_replace
+
+> `str_replace(string, pattern, replacement)` replaces the first instance of `pattern` in `string` with `replacement`. `str_replace_all(string, pattern, replacement)` replaces all instances of `pattern` in `string` with `replacement`.
+
+* Once again, this command will become more powerful when we know regular expressions.
+
+```{r}
+# Replace the first instance of "e" in "watermelon" with "X"
+str_replace("watermelon", "e", "X")
+```
+
+```{r}
+# Replace all instances of "e" in "watermelon" with "E"
+str_replace_all("watermelon", "e", "X")
+```
+
+* Now, extending to a dataframe:
+
+```{r}
+df_colors %>% 
+  mutate(renamed = str_replace(colors, "antique", "vintage"))
+```
+
+* With regular expressions we can do operations such as remove any two consecutive vowels:
+
+```{r}
+df_colors %>% 
+  mutate(noVowelPairs = str_replace(colors, "[aeiou]{2}", ""))
+```
+
+#### Shortcut: str_remove
+
+* Getting rid of a certain `pattern` within a `string` is a common operation, so instead of typing `str_replace(string, pattern, replacement = "")` or `str_replace_all`, `stringr` gives you the shortcuts `str_remove` and `str_remove_all`.
+
+```{r}
+df_colors %>% 
+  mutate(minusOneE = str_remove(colors, "e"),
+         minusAllEs = str_remove_all(colors, "e"))
+```
+
+### str_to*
+
+> The four commands `str_to_upper`, `str_to_lower`, `str_to_title`, and `str_to_sentence` change the **case** of the characters in the input string(s).
+
+```{r}
+myOpinion = "R is REALLY cool"
+
+# casts all characters to lowercase
+str_to_lower(myOpinion)
+
+# casts all characters to uppercase
+str_to_upper(myOpinion)
+
+# casts the first letter of each word to uppercase, the rest to lowercase
+str_to_title(myOpinion)
+
+# casts the first letter of the string to uppercase, the rest to lowercase
+str_to_sentence(myOpinion)
+```
+
+---
+
+##### EXERCISE: Practice the "Pull" and "Edit" Functions
+
+* This exercise will reinforce the "pull" and "edit" string functions by having students practice on questions of intermediate difficulty.
+
+* Using `df_colors`, **write code** to answer the following questions:
+
+* Display all the colors whose first letter is the same as their last letter.
+
+```{r}
+# Answer here
+```
+
+* Create a new column, which contains the color names without any digits.
+
+    - Hint 1: You don't have to remove each digit separately! Sneak preview... use the regular expression `"[:digit:]"` to stand for any digit!
+    - Hint 2: Some numbers have multiple digits... we want to remove `all` of them.
+
+```{r}
+# Answer here
+```
+
+* Create a new column which contains the same exact color names, but those that contain the string "blue" are entirely in uppercase.
+    - Hint: Use `case_when`!
+
+```{r}
+# Answer here
+```
+
+
+---
+
+# Regular Expressions
+
+* Throughout these notes, we have hinted at and briefly seen regular expressions a few times; we now dive into them in more detail.
+
+> **Regular expressions** are a language of simple characters used to capture complex string concepts.
+
+* By "complex string concepts", we mean those that are easy to describe but hard or even impossible to check for manually with just literal characters.
+
+* For example, regular expressions make checking for any two consecutive vowels very easy; we saw this earlier with `"[aeiou]{2}"`. 
+    - However, with literal characters, we would have to check for "aa", "ae", "ai", "ao", "au", "ea"... et cetera.
+    - You can see how this would quickly become unwieldy with even a slightly more complex pattern.
+
+* Page 2 of [the stringr cheatsheet](https://evoldyn.gitlab.io/evomics-2018/ref-sheets/R_strings.pdf) contains a helpful reference.
+
+## Data
+
+* We're going to use a smaller, more manageable version of `df_colors` for the regular expression exercises.
+
+```{r}
+colors_small = df_colors %>% 
+  slice(c(2, 8, 50, 130, 180, 210, 317, 452, 602, 652))
+
+colors_small
+```
+
+## str_view
+
+> `str_view(string, pattern)` is a helpful wrapper function as you learn regular expressions, that highlights exactly which part of `string` matches `pattern`. 
+
+> `str_view` does not interact with dataframes, so you have to extract the vector manually.
+
+* While we are learning how to use string operations and regular expressions within *dataframes*, this can be a complex context to learn them in.
+
+* `str_view` helps you learn regular expressions, but requires that you are working with just a vector of strings, which we can extract with `pull` or the `$` operator.
+
+* **We will just use `str_view` as an instructional tool during our introduction to regular expressions, it is not a practical command for data analysis.**
+
+```{r}
+# equivalent to: colors_small$colors
+color_vector = colors_small %>% pull(colors)
+
+color_vector
+```
+
+* By default, `str_view` shows you the elements in your vector which HAVE a match, and highlights the matching subsection:
+
+```{r}
+str_view(color_vector, "[:digit:]{2}")
+```
+
+* We will often set the argument `match = NA` which specifies to display ALL elements.
+
+```{r}
+str_view(color_vector, "[:digit:]{2}", match = NA)
+```
+
+## Sets and Alternatives
+
+- `pattern1|pattern2|pattern3...` --- *or*, match pattern1 or pattern2 or pattern3, and so on
+- `[abc]` --- *one of*, match one of "a" or "b" or "c"
+- `[^abc]`--- *anything but*, match a character which is NOT one of "a" or "b" or "c"
+
+- You can also use more complex ranges with `-`, such as... 
+    - `[a-z]` for all lowercase letters
+    - `[B-F]` for any uppercase letters between and including B and F
+    - `[0-5]` for digits between and including 0 and 5
+    - `[a-z0-5]` for any lowercase letter or any digit between and including 0 and 5.
+
+
+* Which colors contain the pattern "gray" OR "grey"?
+
+```{r}
+str_view(color_vector, "gray|grey", match = NA)
+```
+
+* Here's another pattern which achieves the same goal:
+
+```{r}
+# stands literally for: a 'g', then an 'r', then an 'a' or an 'e', then a 'y'.
+str_view(color_vector, "gr[ae]y", match = NA)
+```
+
+* Applied to our dataframe through `filter` and `str_detect`:
+
+```{r}
+colors_small %>% 
+  filter(str_detect(colors, "gray|grey"))
+```
+
+* Which colors contain a vowel that is immediately followed by EITHER another vowel OR a digit?
+
+```{r}
+str_view(color_vector, "[aeiou][aeiou0-9]", match = NA)
+```
+
+### Sidenote: str_extract on multiple matches
+
+* Notice that "chartreuse3" has multiple matches for the above pattern; "eu" AND "s3".
+
+* `str_extract`, by default, will return the FIRST match.
+
+```{r}
+colors_small %>% 
+  mutate(matching = str_extract(colors, "[aeiou][aeiou0-9]"))
+```
+
+* If we want to retain ALL matches, we can use `str_extract_all`, but be warned this data is un-tidy and may return a list-column.
+
+* We don't teach you how to deal with list-columns formally in this course.
+
+```{r}
+colors_small %>% 
+  mutate(matching = str_extract_all(colors, "[aeiou][aeiou0-9]"))
+```
+
+---
+
+Back to examples!
+
+* Which colors contain an "r" that is immediately followed by a consonant (a letter which is not a vowel)?
+    - Technically, `[^aeiou]` includes numbers, symbols, spaces, and literally anything that is not a lowercase vowel - it happens to not matter here, but is a noteworthy cautionary tale!
+
+```{r}
+str_view(color_vector, "r[^aeiou]", match = NA)
+```
+
+```{r}
+colors_small %>% 
+  filter(str_detect(colors, "r[^aeiou]"))
+```
+
+## Anchors
+
+- `^` --- the start of the string
+    - This is the same symbol as the "anything but" set above; it acts as "anything but" WITHIN brackets, but outside of brackets it signifies the start of the string
+- `$` --- the end of the string
+
+## Quantifiers
+
+- When these symbols appear AFTER a token, they modify how many times that token should match.
+
+- `?` --- 0 or 1
+- `*` --- 0 or more
+- `+` --- 1 or more
+- `{n}` --- exactly `n` times
+- `{n,}` --- `n` or more
+- `{m,n}` --- between (and including) `m` to `n` times
+
+* Which colors START with two consonants?
+    - Rather than list all consonants, let's just use "anything but" the vowels.
+
+```{r}
+# Trying taking the first carat out, and then both, and see how drastically the pattern changes!
+
+str_view(color_vector, "^[^aeiou]{2}", match = NA)
+```
+
+```{r}
+colors_small %>% 
+  filter(str_detect(colors, "^[^aeiou]{2}"))
+```
+
+* Which colors contain the pattern: "An 'e', optionally followed by a single letter, followed by a single digit?
+
+```{r}
+str_view(color_vector, "e[a-z]?[0-9]", match = NA)
+```
+
+* Which colors END with the pattern described above?
+
+```{r}
+# Only addition in the pattern is the $ at the end, which stands for "end of string"
+str_view(color_vector, "e[a-z]?[0-9]$", match = NA)
+```
+
+
+## Special Sets
+
+- `.` --- matches literally any single character except for a newline, very commonly used   
+
+- `[:space:]` --- space, tab, newline
+- `[:blank:]` --- space and tab
+- `[:punct:]` --- a collection of punctuation characters
+- `[:symbol:]` --- a collection of symbols
+- `[:digit:]` --- a digit
+- `[:lower:]` --- same as `[a-z]`, a lower-case letter
+- `[:upper:]` --- same as `[A-Z]`, an upper-case letter
+- `[:alpha:]` --- standing for alphabet, same as `[a-zA-Z]`, `[:lower:]|[:upper]`
+- `[:alnum:]` --- standing for alphanumeric, letter or number, `[:alpha:]|[:digit:]`
+- `[:graph:]` --- anything but whitespace: punctuation, symbols, digits, letters
+    - same as `[:punct:]|[:symbol:]|[:alnum:]`
+    
+## Parentheses and Capture Groups
+
+* A potential shortcoming of the previous patterns described is we have no way to "self-reference".
+
+* For example, `[^aeiou]{2}` matches any two consecutive consonants, which don't have to be the same.
+
+* What if we need them to be the same, and we don't want to check for "bb" or "cc" or "dd"...?
+
+> Surrounding a regular expression in (parentheses) allows you to reference it later with `\\#`, such as `\\1` for the first set of () or `\\2` for the second.
+
+* To match the same consonant twice in a row:
+
+```{r}
+str_view(color_vector, "([^aeiou])\\1", match = NA)
+```
+
+* Which words have the same letter repeated but not consecutively? Match (and capture) any letter, then one or more "buffer" letters, and then a repeat of the first letter.
+
+```{r}
+str_view(color_vector, "(.).+\\1")
+```
+
+* Notice that "aliceblue" has another match which is not showing up here; "eblue".
+
+* Also notice that "aquama" is only counted once in "aquamarine".
+
+```{r}
+colors_small %>% 
+  mutate(matches = str_count(colors, "(.).+\\1"))
+```
+
+* These findings are examples of two general principles.
+
+> Regular expressions are **greedy**; they will match the LONGEST POSSIBLE sequence that they can.
+
+> When detecting occurrences of a pattern, only distinct, non-overlapping occurrences will count separately.
+
+```{r}
+str_view("rrr", "rr")
+str_count("rrr", "rr")
+```
+
+* You can also use parentheses to just control the logic of a regular expression, even if you don't care about reusing the match.
+
+* For example, let's revisit: which colors contain a vowel that is immediately followed by EITHER another vowel OR a digit?
+
+```{r}
+# Our first solution
+str_view(color_vector, "[aeiou][aeiou0-9]", match = NA)
+```
+
+```{r}
+# An attempt to reasonably use "or" which won't work; this will read as (vowel-vowel) or (digit)
+str_view(color_vector, "[aeiou][aeiou]|[:digit:]", match = NA)
+```
+
+```{r}
+# Parentheses make this work as vowel - (vowel or digit)
+str_view(color_vector, "[aeiou]([aeiou]|[:digit:])", match = NA)
+```
+
+
+
+---
+
+##### EXERCISE: Write Your Own Regular Expression
+
+* This exercise will give you practice writing your own regular expressions.
+
+*Note: These can be accomplished without regular expressions with relative ease. I ask you to use regular expressions as an exercise.*
+
+* Our example data will be `fruit`, a vector of 80 common fruits.
+
+```{r}
+fruit
+```
+
+* **Write** the regular expression needed to answer the following questions.
+
+* Which fruits contain the pattern "berry" or "melon"?
+
+```{r}
+# str_view(fruit, "your pattern here")
+```
+
+* Which fruits contain a "b", followed by exactly three characters followed by any character which is NOT y?
+
+```{r}
+# str_view(fruit, "your pattern here")
+```
+
+* Which fruits start AND end with a vowel?
+    - *Hint: Your regular expression should translate to plain english as "start of string, then a vowel, then any number of any character, then a vowel, end of string"*
+
+```{r}
+# str_view(fruit, "your pattern here")
+
+```
+
+> Philosophical takeaway: **Take your time** building regular expressions. One character, one concept at a time. Rome wasn't built in a day, neither are regular expressions.
+
+---    
+    
+## Matching Special Characters Literally With The Backslash
+
+```{r}
+ugly_equations = c("$22.00 + 2^3 = 30", "sqrt(-1) = ?")
+```
+
+* Let's say we wanted to detect which equations contain the literal symbol "+".
+
+* A reasonable first attempt would be:
+
+```{r, error = TRUE}
+str_view(ugly_equations, "+")
+```
+
+* That ugly error is occurring because our regular expression has a syntax problem.
+
+* Namely, `+` has special meaning in a regular expression, meaning repeat the previous symbol one or more times. We didn't give it a symbol to repeat one or more times.
+
+* A reminder of how `+` behaves by default:
+
+```{r}
+# Match one or more digits consecutively
+# Reminder: Regular expressions are greedy, so it will match two digit numbers as one expression, rather than the two digits separately
+str_view(ugly_equations, "[:digit:]+")
+```
+
+> To match a special character **literally**, precede it with two backslashes: `\\`.
+
+```{r}
+str_view(ugly_equations, "\\+", match = NA)
+```
+
+* Which equations start with `$`?
+
+```{r}
+str_view(ugly_equations, "^\\$", match = NA)
+```
+
+* Which equations end with a `?`?
+
+```{r}
+str_view(ugly_equations, "\\?$", match = NA)
+```
+
+
+# Exoplanets
+
+- The *exoplanet* data set has many string variables
+- Let's return to and examine them using `stringr`.
+
+## Read the Data
+
+```{r}
+planets = read_csv("../../data/exoplanet-confirmed_2022-09-12.csv",
+                   skip = 124) %>%
+  select(pl_name, hostname, discoverymethod, sy_pnum, disc_year) %>%
+  rename(planet = pl_name,
+         star = hostname,
+         method = discoverymethod,
+         number=sy_pnum,
+         year = disc_year) %>%
+  mutate(index = row_number()) %>% #Add an index variable
+  select(index, everything())
+head(planets)
+```
+
+## Last Character
+
+> Find the last character of each planet name. 
+
+```{r}
+# Live coding
+```
+
+> Produce a bar graph of how often each last character occurs.
+
+```{r}
+# Live coding
+```
+
+* By default, these are appearing in alphabetical order.
+
+* We now introduce the `reorder()` command to remedy this.
+
+### Sidenote: reorder()
+
+* In technical terms...
+
+> `reorder(x, X, FUN = mean)` changes the variable `x` into a factor variable, with levels in order of ascending `FUN(X)` within each unique value of `x`.
+
+* In plain English...
+
+> `reorder(columnName, order_by)` is often used so that the values of `columnName` appear in order of their values of `order_by` on a plot.
+
+```{r}
+planet_letters = planets %>%
+  mutate(letter = str_sub(planet,-1, -1))
+  
+letter_counts = planet_letters %>% group_by(letter) %>% summarize(n = n())
+
+ggplot(letter_counts, aes(x = reorder(letter, n), y = n)) +
+  geom_col(color="black", fill="thistle") +
+  labs(
+      x = "Planet name suffix",
+      y = "Count",
+      title = "NASA Exoplanet Archive",
+      subtitle = "As of June 15, 2021"
+    )
+
+ggplot(letter_counts, aes(x = reorder(letter, desc(n)), y = n)) +
+  geom_col(color="black", fill="thistle") +
+  labs(
+      x = "Planet name suffix",
+      y = "Count",
+      title = "NASA Exoplanet Archive",
+      subtitle = "As of June 15, 2021"
+    )
+```
+
+---
+
+## "c"'s Without "b"'s
+
+> Are there any planets in the data set whose name ends in " c" for which there is not a corresponding planet in the same stellar system whose name ends " b"?
+
+```{r}
+# Live coding
+```
+
+## Planet Naming Patterns
+
+> Most planets have a name that matches the star name followed by a space and a lower case letter. Identify any planets that do not follow this pattern.
+
+- The simple approach here can fail if the star name contains characters with special meaning in a regular expression.
+
+```{r}
+# Live coding
+```
+
+```{r}
+# Live coding
+```
+
