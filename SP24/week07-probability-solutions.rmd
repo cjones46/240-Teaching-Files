@@ -1,0 +1,763 @@
+---
+title: "STAT 240: Probability Theory"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      error = TRUE, fig.height = 4)
+library(tidyverse)
+library(kableExtra)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R") # This file that Professor Bret Larget compiled gives you access to ggplot-friendly functions for visualizing probability.
+```
+
+# Overview
+
+## Learning Outcomes
+
+* These lectures will teach you how to:
+    - Identify what a valid probability distribution is
+    - Calculate basic properties of probability distributions with base R and tidyverse commands
+    
+## Preliminaries
+
+* You will need the `kableExtra` package for this file; run `install.packages("kableExtra")`.
+
+* Files to download to `COURSE/lecture/unit7-probability`:
+    - `week07-probability.Rmd`
+    - `week07-probability.html`
+
+* Files to download to `COURSE/scripts`:
+    - `viridis.R`
+    - `ggprob.R`
+
+## LaTeX: For Mathematical Notation
+
+- The rest of the lectures in this class will include substantial use of the LaTeX system for writing mathematical notation.
+
+- In a similar way that regular expressions are a self-contained language that R and many other coding languages can use, LaTeX can be used in many text editors, including but not limited to RStudio.
+
+- Mathematical notation includes many, many symbols which are not part of the standard keyboard; for example, $\ge$ or $\sigma$.
+
+- LaTeX provides a way to produce these symbols using keys that are in your keyboard, by surrounding an expression in `$dollar signs$`.
+
+- For example, the symbol $\ge$ ("greater than or equal to") is written in LaTeX as `$\ge$`, and $\sigma$ ("sigma") is written as `$\sigma$`.
+
+- We can also create a LaTeX chunk, with two dollar signs on each line delimiting the start and end. Any mathematical notation in the chunk will appear as a larger, centered equation. For example...
+
+$$
+\frac{1}{n}\sum_{i=1}^n (x_i - \mu)^2
+$$
+
+- You are **not responsible** for learning to write LaTeX. However, if you continue to take courses in mathematics and/or statistics, you may find it useful, as LaTeX is the de facto standard for mathematical writeup.
+
+- This class will use some notation to describe mathematical concepts; you are expected to be able to read the finished product, but not the LaTeX, which we will provide to you.
+
+*Final note: If you are in this .Rmd file (not the .html), there are a couple LaTeX commands (not symbols) right below this text. These establish three shortcut commands for three LaTeX functions we will use very often.*
+
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\renewcommand{\prob}{\mathsf{P}}
+
+
+## A Note on Our Semester
+
+- The first half of the semester was focused on *coding tools* for reading, manipulating, and visualizing data.
+
+- The second half of the semester will focus on more *statistical* concepts. We will still be coding, but the purpose and emphasis will be more mathematical.
+
+- Our long-term goal is to cover **introductory statistical inference**, which is a fundamental process for making conclusions about a population based on a smaller sample of observed data.
+
+- Statistical inference is an intricate process, which requires knowledge of probability, statistical models, distributions, and random variables. We will spend the next few lectures building up our understanding of these concepts so that we may conduct statistical inference.
+
+# A Primer on Random Variables, Probability, and Distributions
+
+## Random Processes
+
+* Our study of **probability** begins with the notion of a **random** process.
+
+> A **random** process is some "experiment" which produces an unpredictable or non-deterministic outcome. That is, we cannot know for sure what outcome we will observe, but we may know the likelihood of each possible outcome.
+
+* The *outcomes* of these random processes do not have to be numeric.
+
+* For example, "flipping a coin twice" is a random process, with the possible outcomes H-H, H-T, T-H, or T-T. ("H" for "heads", "T" for "tails")
+
+- It is important to notice that a random process was still random even after it has happened.
+    - For example, if we conduct the above random process and flip a coin twice, and we get T-H, that does not mean we always had a 100% chance of getting T-H. The original process was still random.
+    - We often *observe data from a random process* and still acknowledge that the process which produced this data was random.
+
+## Random Variables
+
+* Statistical inference requires numeric data. The outcomes of an experiment do not have to be numeric, such as "heads - tails" from two coin flips; but the **random variable** that arises from the experiment must be a numeric value.
+
+> A **random variable**, informally, is the single numeric quantity of interest that can take on a new value every time you run a random process/experiment. Formally, it is a function which maps all the possible outcomes of a random process to a real number.
+
+* There are three important features of a random variable:
+
+1. It is **random**; we cannot predict its value beforehand.
+2. It is **numeric**; this will often take the form of 0 or 1 for variables like "did this happen or not", but it can also be any real number.
+3. It is a **single number**, not a list of numbers.
+
+---
+
+* Once again, consider flipping a coin twice, with possible outcomes H-H, H-T, T-H, or T-T.
+
+* A **random variable** based on this random process could be "The total number of heads observed" - let's call this $X$.
+    - *Note: We will always refer to random variables with a capital English letter.*
+
+* If the outcome is H-H, $X$ is 2. If the outcome is H-T or T-H, $X$ is 1. If the outcome is T-T, $X$ is 0.
+
+* Note that this value is random, numeric, and reduces the outcome of the experiment to a single number.
+
+---
+
+* A second example considers the roll of a fair six-sided die (the singular of "dice"). The outcomes of this experiment are 1, 2, 3, 4, 5, or 6.
+
+* A potential random variable arising from this random process could be the straightforward number returned by the dice. The potential values of the random variable here are 1, 2, 3, 4, 5, or 6 - they do happen to be the same as the outcomes of the experiment, but as we saw in the previous example, they do not have to be.
+
+---
+
+* Finally, let us extend the experiment to be two rolls of a fair six-sided die. There are 36 possible outcomes to this experiment, including 1-1, 1-2, 1-3, ... 1-6, 2-1... 6-6.
+
+* The outcomes, as they are, are **not** a random variable; 1-2 cannot be the outcome of a random variable because it is not a single number.
+
+* However, the *sum* of the two dice rolls would be a random variable - let's call it $X$. (The maximum, or the minimum, or any other reducing function which takes in multiple numbers and returns one, are also a valid random variable here.) 
+
+* If the outcome is 1-2, $X$ is 3. If the outcome was 5-5, 4-6, or 6-4, $X$ would be 10.
+
+## Probability
+
+* We do not know which outcome of a random process is going to occur, and therefore we do not know which value a random variable is going to take on.
+
+* However, we mentioned in the definition of a random process that we sometimes can know the *chance* of each outcome occurring. Probability is the study of these chances.
+
+> Informally, **probability** as a whole is the branch of mathematics which studies the numeric **likelihood** that a random process will produce a certain outcome.
+
+* When we use the term "probability", we will rarely be talking about the entire field of study, and more often about the probability of a specific outcome.
+
+> The **probability of an outcome** is a single number between 0 and 1 (or equivalently a percentage between 0% and 100%) that indicates how likely you are to get that outcome from the given random process.
+
+* There is an alternative conceptualization of probability which may or may not speak more to you: If we could run the random process infinitely many times, it is the percentage of those times we would get the given outcome.
+
+---
+
+### Sidenote: Probability All Around Us
+
+- In conversation, we frequently reference probability and randomness (sometimes of a process that has already happened) without talking about the formal mechanisms behind it. 
+
+- For example, consider the following statements which describe probability/randomness of a future process:
+    - *"I might miss my bus if I don't hurry up."*
+    - *"The weather report says it is probably going to rain tomorrow."*
+    - *"I will need to have a good day on the final to get an A."*
+    
+- These statements reflect how we often think about probability - about not knowing a future outcome.
+    
+- However, consider the following statements which describe probability/randomness about a *past* process:
+    - *"On another day, we would've won that game."*
+    - *"I didn't even leave late, I just hit every red light on the way here."*
+    
+- These are *also* probabilistic statements which imply a past process was random, even though we know what outcome really occurred.
+
+- One can think of "the game" in the first sentence as a random process that produces an outcome, "win" or "loss", with some probability each; and we cannot know beforehand which will actually happen. Even after we know the result, the game was still random.
+
+- There are many sources of randomness beyond those we have discussed in this brief introduction.
+
+- **Probability is everywhere, and underpins how we often think and talk about our lives.**
+
+---
+
+* The numeric probabilities associated with coin flips and dice rolls are perhaps the most comfortable to us.
+    - The probability of getting "heads" from the flip of a fair coin is 1/2, or 50%.
+    - The probability of getting a 3 from rolling a fair, six-sided dice is 1/6, or $\approx$ 16.7%.
+    
+* We will refer to these probabilities as $\prob(X = x)$, where $X$ is the random variable, and $x$ is the value $X$ could take on.
+
+* However, probability can become more complicated very quickly:
+    - The probability of rolling two dice and having them sum to 10 is 3/36, or $\approx$ 8%.
+    - The probability of a single sampled point from a normal distribution being within one standard deviation of the mean is $\approx$ 68.3%.
+    
+* We will usually deal with probabilities in the context of a **probability distribution**.
+
+## Probability Distributions
+
+* You can define a probability distribution for the outcomes of the random process (e.g. H-H, H-T, T-H, T-T) or for the values of the random variable (e.g. 0, 1, or 2).
+
+> A **probability distribution** is, informally, the full enumeration of how likely each possible outcome of a random process/value of a random variable is. Formally, it is a function which maps each possible outcome or value to a real number in the range [0, 1]. 
+
+* A valid probability distribution follows three rules:
+
+1. Any possible outcome has an individual probability of at least 0% and at most 100%.
+2. The sum of the probabilities of all possible outcomes must be exactly 100%. *In other words: "there is exactly a 100% chance that something will happen."*
+3. The probability of the union of mutually exclusive events is the sum of the probabilities of the individual events. *In other words: The probability of A or B happening is the probability of A happening plus the probability of B happening, when A and B have no overlap*.
+
+*An example of rule 3: When you roll a fair six-sided die, the chance of getting a 2 or a 3 is the chance of getting a 2 (1/6) plus the chance of getting a 3 (1/6) because you cannot get both a 2 and a 3 in the same roll. However, the chance of getting a number less than six or a number less than five is NOT 5/6 + 4/6 = 10/6, because the two events have outcomes in common.*
+
+* For example, the probability distribution for a fair six-sided dice is that each of 1, 2, 3, 4, 5, and 6 has a 1/6 chance of occurring.
+
+* The probability distribution for the sum of two rolls of a fair sided dice (a random variable) is the following:
+
+```{r}
+tibble(x = 2:12, probability = round(c(1:6, 5:1)/36, 2)) %>% print(n = Inf)
+```
+
+* Sidenote: We can use the `kable()` and `kable_styling()` functions from the package `kableExtra` to change a `tibble` into an object that is more friendly for better looking printing. (Behind the scenes, this is using HTML rather than RStudio's internal table printing system)
+
+```{r}
+tibble(x = 2:12, probability = round(c(1:6, 5:1)/36, 2)) %>% 
+  # kable() changes the tibble into a "knitr_kable" object, which is just a table that can be customized for printing 
+  kable() %>%
+  # kable_styling() does most of the heavy lifting in changing the visualization options
+  kable_styling( position = "left", full_width = FALSE,
+                 bootstrap_options = c("striped"))
+  
+```
+
+* You are **not responsible** for knowing how to use `kableExtra` functions, but we will use them often.
+
+---
+
+* Finally, these probability distributions are able to be written out because the outcomes are **discrete**. If we were dealing with a **continuous** outcome such as the height of a random person, it would be impossible to list out all possible outcomes because there are infinitely many (68.1 inches, 68.11 inches, 68.111 inches...). We will return to this issue in the next section.
+
+## Putting it All Together
+
+* Now that we have looked at each concept individually, let us synthesize them to see a full example of random processes, variables, and probability distributions.
+
+1. The **random process**, or "experiment", is the original action whose outcome we cannot know ahead of time, like randomly throwing a dart at a dartboard. The "outcomes" of the experiment are the set of all possible results - such as all of the different zones the dart could land in.
+
+2. The **random variable**, or "quantity of interest", is the single number of interest which comes from a single iteration of the random process. For example, the score of the dart is a random variable. 
+
+3. The **probability distribution** of the random variable considers all possible values the random variable could take on and assigns them a **probability**, a real number between 0 and 1, indicating how likely the random variable is to take on that value. For example, the probability of scoring 50 with your dart (or in terms of a non-mathematical outcome of the random *process*, getting a bullseye) is $\approx$ 0.0001%.
+
+# Discrete vs. Continuous
+
+* We have seen the terms "discrete" and "continuous" before to describe variables in dataframes. They apply in a very similar way to probability theory.
+
+* These terms are very important to probability theory, and will be used often in the second half of this course, so we review them here.
+
+* Both discrete and continuous probability distributions/random variables have to follow the same overarching rules described above, but we handle their math in a slightly different way.
+
+## Discrete Outcomes
+
+> **Discrete** outcomes are those which come from a specific set of **distinct** values or categories. If numeric, there must be gaps between the possible values, such as the whole numbers. One could theoretically start from the beginning of the set and start listing the possible values.
+
+* We describe the probability distribution of a discrete random variable with a *probability mass function* (pmf).
+
+* We name it this because one can imagine that there is "mass"/"weight" resting upon each discrete possible value.
+
+* Recall earlier that a probability distribution is *formally* a function which can assign each of the possible values of a random variable to a probability.
+    - This function must never assign negative values or values greater than 1.
+    - Furthermore, the sum of all the probabilities of the possible values of the random variable must equal one.
+
+* For example, the probability distribution of *the number of heads observed* (random variable) from two coin flips (random process) is discrete:
+
+```{r, echo=FALSE}
+# One of the ggprob.R functions which we will learn more about next week
+gbinom(n=2, p=0.5, size=5) +
+    theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22,face="bold")) +
+  scale_x_continuous(breaks = c(0, 1, 2))
+```
+
+## Continuous Outcomes
+
+> **Continuous** outcomes are those which may take on ANY numeric value, sometimes within a certain range, sometimes over all real numbers. There are infinitely many possible values in this range, considering that numbers can have arbitrary number of digits after the decimal point. 
+
+* Often we will treat a variable as continuous even if we do not know it to infinite precision or if it exists along a fine grid of technically discrete values.
+    * For example, let's assume that the salaries of a list of employees are expressed to the nearest cent and that none are above a certain value. Technically, there is only a finite number of discrete salaries that are possible. But we would likely treat this variable as continuous because there are tens of thousands of possible discrete values. 
+
+* We describe the probability distribution of a continuous random variable with a *probability density function* (pdf).
+    - This function must never assign negative values or values greater than 1.
+    - Furthermore, the area under the curve must equal 1.
+    
+* Much like `geom_density`, a probability density function takes on a value at all points which usually (but not always) varies in a smooth curve.
+
+* Because the pdf has a value at infinitely many points, it does not make sense to "add up every value", and the probability at a single point loses meaning because there are infinitely many.
+
+* This is why we will rely mostly on area with continuous probability distributions.
+
+* For example, the probability distribution of *the height in inches of American adult males* is continuous.
+
+```{r echo=FALSE}
+gnorm(mu=69,sigma=2.9, size = 3) +
+  xlab("Height (in.)") +
+  ylab("Density") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22,face="bold"))
+```
+
+* More theoretically, a random decimal number between 2 and 5 also follows a continuous distribution.
+
+```{r, echo = FALSE}
+a = 2
+b = 5
+ggplot(tibble(x=c(a,b), y=1/(b-a)), aes(x,y)) +
+  geom_line(size=3) +
+  geom_segment(aes(xend=x, yend=rep(0,2)), size=3) +
+  geom_segment(aes(x=a-1, y=0, xend=a, yend=0), size=3) +
+  geom_segment(aes(x=b+1, y=0, xend=b, yend=0), size=3) +
+  ylim(c(0, 1/(b-a))) +
+  xlim(c(a-1, b+1)) +
+  scale_x_continuous(breaks = seq(a-1,b+1)) +
+  xlab("X") +
+  ylab("Density")+
+  ggtitle(paste0("Uniform(",a, ", ", b, ")")) +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22,face="bold"))
+```
+
+# Properties of Distributions
+
+* Knowing the probability distribution of a random variable allows us to compute useful things about where it is centered and how varied it is.
+
+* The next section of this lecture will walk us through computing these useful measures from a distribution.
+
+## Mean/Expected Value
+
+> The **mean** or **expected value** of a random variable is the average value it would take on with infinitely many iterations of the random process. It can also be understood 
+
+* For discrete variables, the expected value does not have to be a value the random variable can take on. For example, the expected value of a fair roll of a six-sided die is 3.5, even though a single roll cannot return 3.5.
+
+* The calculation of expected value is conceptually similar, but mathematically different for discrete vs. continuous variables.
+
+### Discrete Case
+
+$$
+\E(X) = \sum x * P(X = x)
+$$
+
+* Where $x$ represents each of the possible values that the random variable $X$ can take on.
+
+* The intuition of this formula is that we are taking a modified version of the average of all possible values; but the values $x$ which are more likely to occur are going to have more influence on the final number, through their higher values of $\prob(X = x)$.
+
+* For example, to calculate the average value of a single roll of a fair six-sided die (let's call this $D$):
+
+$$
+\E(D) = 1*\prob(D = 1) + 2*\prob(D = 2) + 3*\prob(D = 3) + 4*\prob(D = 4) + 5*\prob(D = 5) + 6*\prob(D=6)
+$$
+
+$$
+... = 1*(1/6) + 2*(1/6) + 3*(1/6) + 4*(1/6) + 5*(1/6) + 6*(1/6) = 3.5
+$$
+
+### Continuous Case
+
+* The discrete formula does not apply to continuous variables because there are infinitely many possible values. Therefore, we must rely on integrating over an area rather than summing some point-wise probabilities.
+
+$$
+\E(X) = \int x * \prob(X = x)
+$$
+
+* **You will not be asked to evaluate integrals in this class.**
+
+
+## Standard Deviation & Variance
+
+> The **variance** of a random variable is the expected value of the squared difference from the mean.
+
+### Discrete Case
+
+* Let $\mu = \E(X)$, the expected value of $X$.
+
+$$
+\Var(X) = \sum (x-\mu)^2*\prob(X=x)
+$$
+
+* This is similar to the $\E(X)$ formula, except the thing we are summing is now $(x-\mu)^2$, the squared distance from the mean, instead of just $x$.
+
+* For example, to calculate the variance of a single roll of a fair, six-sided dice, once again $D$:
+
+$$
+\Var(D) = \sum (x-3.5)^2*\prob(D=x) = (1 - 3.5)^2*\prob(D = 1) + + ... + (6-3.5)^2*\prob(D = x)
+$$
+
+$$
+... = (1 - 3.5)^2*(1/6) + ... + (6-3.5)^2*(1/6) \approx 2.92.
+$$
+
+> The **standard deviation** of a random variable is the square root of its variance, and therefore the variance is the square of the standard deviation.
+
+* Therefore the standard deviation of $D$ above $\approx \sqrt{2.92} \approx = 1.71$; this is on average how far our dice roll will be away from the mean.
+
+### Continuous Case
+
+* Like the continuous analog of the discrete mean, the continuous analog of the discrete variance replaces the sum with an integral.
+
+$$
+\Var(X) = \int (x-\mu)^2*\prob(X=x)
+$$
+
+---
+
+- The variance is often denoted $\sigma^2$, and the standard deviation is then denoted as $\sigma$. 
+
+- By definition, the variance and the standard deviation cannot be negative.
+
+- These measures show us how varied or spread out the distribution is.
+
+# Live Coding
+
+## Problem 1
+
+A discrete random variable $X$ with possible values $0,1,2,3,4$ has the following partial distribution.
+
+```{r}
+## tibble with the distribution
+prob1 = tibble(
+  x = 0:4,
+  p = c(0.15, 0.25, 0.05, 0.35, NA)
+)
+
+## long format
+prob1
+
+prob1 %>%
+  pivot_wider(names_from = x, values_from = p) %>% 
+  mutate(x = "P(X=x)") %>% 
+  select(x,everything()) %>% 
+  kable() %>% 
+  kable_styling(position = "left", full_width = FALSE, #Adjust the table appearance
+                bootstrap_options = c("striped", "condensed"))
+  
+```
+
+> What is $P(X = 4)$?
+
+
+
+We know for discrete random variables,
+
+$$
+\sum_{x} P(X = x) = 1
+$$
+
+- Find the missing $P(X=4)$ so that the sum of probabilities is one.
+    - sum the other probabilities
+    - subtract the total from one
+    - set this to the missing probability
+
+```{r}
+partial_sum = prob1 %>% 
+  filter(x != 4) %>% 
+  summarize(sum_p = sum(p)) %>% 
+  pull(sum_p)
+
+p4 = 1 - partial_sum
+
+p4
+
+prob1 = prob1 %>% 
+  mutate(p = case_when(
+    !is.na(p) ~ p,
+    TRUE ~ p4))
+
+## long format
+prob1
+
+## pretty wide format
+prob1 %>%
+  pivot_wider(names_from = x, values_from = p) %>% 
+  mutate(x = "P(X=x)") %>% 
+  relocate(x) %>% 
+  kable() %>% 
+  kable_styling(position = "left", full_width = FALSE,
+                bootstrap_options = c("striped", "condensed"))
+
+```
+
+
+## Problem 2
+
+> What is the mean of the random variable with the previous distribution?
+
+$$
+\mu = \E(X) = \sum_{x=0}^4 x P(X=x)
+$$
+
+```{r}
+## Calculate the mean using base R code
+x = prob1$x
+p = prob1$p
+mu = sum(x*p)
+mu
+```
+
+
+```{r}
+## Calculate using tidyverse code
+prob2 = prob1 %>% 
+  mutate(xp = x*p) %>% 
+  summarize(mu = sum(xp))
+
+prob2
+```
+
+- Note that the mean (expected value) is a **weighted average** of the possible values of the random variable, weighted by their probabilities.
+
+## Problem 3
+
+> What are the variance and standard deviation of the random variable from problem 1?
+
+$$
+\sigma^2 = \Var(X) = \sum_{x=0}^4 (x - \mu)^2 P(X=x)
+$$
+
+```{r}
+## Base R calculation
+## Variance
+sigma2 = sum((x-mu)^2*p)
+sigma2
+
+## Standard deviation
+sigma = sqrt(sigma2)
+sigma
+```
+
+```{r}
+## Tidyverse Calculation
+## Uses base R value mu
+prob3 = prob1 %>% 
+  mutate(v = (x - mu)^2*p) %>% 
+  summarize(sigma2 = sum(v),
+            sigma = sqrt(sigma2))
+prob3
+
+```
+
+## Problem 4
+
+> Draw a graph of the discrete distribution.
+
+- Use line segments to represent the probabilities
+
+```{r}
+plot1 = ggplot(prob1, aes(x = x, y = p)) +
+  geom_segment(aes(xend = x, yend = 0), color = "blue", size=2) +
+  geom_hline(yintercept = 0) +
+  ylab("P(X=x)") +
+  ggtitle("Distribution of X")
+
+plot1
+```
+
+## Problem 5
+
+> Add a dashed red line at the mean and dotted black lines one standard deviation above and below the mean.
+
+```{r}
+plot1 +
+  geom_vline(xintercept = mu, color = "red", linetype = "dashed") +
+  geom_vline(xintercept = mu + c(-1,1)*sigma,
+             color = "black",
+             linetype = "dotted")
+```
+
+- Note that the mean is the *balancing point* of the distribution
+    - It does not need to be a possible value of the distribution
+    
+- The majority of the probability is within one standard deviation of the mean
+
+- But there is some remaining probability outside of this interval
+
+## Problem 6
+
+> Find the probability within one standard deviation of the mean.
+
+```{r}
+## base R calculation
+p6 = sum(p[x >= mu - sigma & x <= mu + sigma])
+p6
+```
+
+```{r}
+## tidyverse calculation
+prob6 = prob1 %>% 
+  filter(x >= mu - sigma & x <= mu + sigma) %>% 
+  summarize(prob = sum(p))
+
+prob6
+```
+
+
+## Problem 7
+
+- We'll go through Problem 7 during lecture, but then you may work through Problems 8 - 10 outside of class.
+
+- Consider the probability distribution of a random variable $X$ with possible values $0,1,\ldots,10$ that is proportional to the function $g(x) = 6 - |x-5|$.
+- In other words,
+
+$$
+P(X = x) = a(6 - |x-5|), \quad x = 0, 1, \ldots, 10
+$$
+
+> What is the value of $a$?
+
+
+
+- We know that the probabilities need to sum to one.
+- Calculate $6 - |x-5|$ for each $x$.
+- Find the sum.
+- Let $a$ be the reciprocal of this sum.
+
+```{r}
+## base R
+x7 = 0:10
+p7 = 6 - abs(x7 - 5)
+a = 1 / sum(p7)
+sum(p7)
+a
+p7 = a*p7
+prob7 = tibble(x = x7, p = p7)
+prob7
+```
+
+```{r}
+## A tidyverse solution
+prob7_2 = tibble(
+  x = 0:10,
+  p = 6 - abs(x - 5)) %>% 
+  mutate(p = p / sum(p))
+
+prob7_2
+```
+
+## Problem 8
+
+> Graph the distribution.
+
+```{r}
+ggplot(prob7, aes(x = x, y = p)) +
+  geom_segment(aes(xend = x, yend = 0), color = "blue", size=2) +
+  geom_hline(yintercept = 0)
+```
+
+
+## Problem 9
+
+> Find the mean and standard deviation of this distribution.
+
+```{r}
+mu = prob7_2 %>% 
+  mutate(xp = x*p) %>% 
+  summarize(mu = sum(xp)) %>% 
+  pull(mu)
+
+mu
+
+sigma = prob7_2 %>% 
+  mutate(v = (x-mu)^2 * p) %>% 
+  summarize(sigma = sqrt(sum(v))) %>% 
+  pull(sigma)
+
+sigma
+```
+
+
+
+
+## Problem 10
+
+> What proportion of the probability is with one standard deviation of the mean? Within two standard deviations?
+
+```{r}
+## P(mu - sigma < X < mu + sigma)
+prob7_2 %>% 
+  filter(x >= mu - sigma & x <= mu + sigma) %>% 
+  summarize(prob = sum(p))
+
+## P(mu - sigma < X < mu + sigma)
+prob7_2 %>% 
+  filter(x >= mu - 2*sigma & x <= mu + 2*sigma) %>% 
+  summarize(prob = sum(p))
+```
+
+- The majority of the probability is within one standard deviation of the mean
+    - values near two-thirds are common, especially for unimodal and symmetric distributions
+- Most is within two standard deviations
+    - values near 95% is typical for symmetric unimodal distributions
+    
+## Problem 11
+
+> The continuous random variable $U$ has a uniform distribution, that is, its density function is constant, between 0 and 10. Find its density $f(x)$.
+
+The density will be:
+
+- positive and constant between 0 and 10
+- zero outside this interval
+- have a total area of one
+
+The density has the shape of a rectangle with a base of length 10, so the height must be 0.1 to get an area of 1.
+
+$$
+f(x) = 0.1, \quad 0 < x < 10
+$$
+
+When written like this, it is implied that $f(x) = 0)$ for $x < 0$ and $x > 10$.
+
+## Problem 12
+
+> Plot the density function. Shade the area under the plot.
+
+
+- With a continuous distribution, we pick a sequence of points on which to calculate the density
+- Here, take a regular sequence from $-1$ to 11
+- The function `geom_ribbon()` fills in the area between `ymin` and `ymax` and is useful for shading under density curves by setting `ymin` to zero.
+
+```{r}
+prob12 = tibble(
+  x = seq(-1, 11, by = 0.01),
+  f = dunif(x, 0, 10)
+)
+
+ggplot(prob12, aes(x=x)) +
+  ## shade first, then draw the density line over the top
+  geom_ribbon(aes(ymax = f, ymin = 0), fill = "thistle") +
+  geom_line(aes(y = f), color = "black", size=2) +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = c(0:10)) +
+  ylab("density") +
+  ggtitle("Uniform(0,10) Density")
+  
+```
+
+## Problem 13
+
+> Estimate the mean and standard deviation by simulation.
+
+[We will go over simulation more in the coming weeks - do not worry about it too much right, this is just a sneak preview.]
+
+- We would need calculus to calculate the mean and standard deviation of this distribution
+- We can determine the mean using the balancing point interpretation.
+    - The mean must be 5
+    
+- To estimate with simulation, use `runif()` to generate a very large number of random uniform variables
+    - Compute the sample mean and sample standard deviation
+- We can repeat a few times to see if our sample size is large enough so that random fluctuations are small enough.
+- We write a function to do this and then repeat a few times
+
+```{r}
+## simulate n uniform random variables
+## return the mean and sd in a data frame
+sim13 = function(n, min=0, max=10)
+{
+  x = runif(n, min, max)
+  df = tibble(mu = mean(x),
+              sigma = sd(x))
+  return ( df )
+}
+
+n = 10^6
+sim13(n)
+sim13(n)
+sim13(n)
+sim13(n)
+```
+
+- It seems that $n=10^6$ is large enough for our purposes.
+- Simulation is consistent with our guess that $\mu = 5$.
+- We can compare our simulated estimate of the standard deviation to the true value:  
+    - Calculus allows us to determine that the exact variance is $\sigma^2 = 100/12$
+    - Thus, the standard deviation is $\sigma = \sqrt{100/12} = `r round(10/sqrt(12),3)`$
+
