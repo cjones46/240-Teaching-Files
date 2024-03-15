@@ -740,21 +740,21 @@ p = 0.5
 ```
 
 ```{r}
-#dbinom(11, n, p)
+dbinom(11, n, p)
 
-#dbinom(0, n, p)
+dbinom(0, n, p)
 ```
 
 ```{r}
-#pbinom(10, n, p)
+pbinom(10, n, p)
 
-#pbinom(0, n, p)
+pbinom(0, n, p)
 ```
 
 ```{r}
-#qbinom(1, n, p)
+qbinom(1, n, p)
 
-#qbinom(0.5, n, p)
+qbinom(0.5, n, p)
 ```
 
 ---
@@ -766,17 +766,33 @@ p = 0.5
 What are the mean and standard deviation of the $\text{Binomial}(90, 0.7)$ distribution?
 
 ```{r}
-# Live coding
+n = 90
+p = 0.7
+
+mu = n*p
+sigma = sqrt(n*p*(1-p))
 ```
 
 
 ## Problem 2
 
 Plot the $\text{Binomial}(90, 0.7)$ distribution. 
-Add a red partly transparent solid vertical line at the mean, dashed vertical lines one standard deviation above and below the mean, and dotted lines two standard deviations above and below the mean.
+Add a red partly transparent solid vertical line at the mean, 
+dashed vertical lines one standard deviation above and below the mean, 
+and dotted lines two standard deviations above and below the mean.
 
 ```{r}
-# Live coding
+gbinom(n, p, scale = TRUE) +
+  geom_vline(xintercept = mu, color = "red", alpha = 0.5) +
+  geom_vline(xintercept = mu + c(-1, 1) * sigma, linetype = "dashed") +
+  geom_vline(xintercept = mu + c(-2, 2) * sigma, linetype = "dotted")
+  # geom_vline(xintercept = mu - sigma, linetype = "dashed") +
+  # geom_vline(xintercept = mu + sigma, linetype = "dashed")
+```
+
+```{r}
+ggplot() +
+  geom_binom_density(n, p, a = 56, b = 70)
 ```
 
 
@@ -785,7 +801,7 @@ Add a red partly transparent solid vertical line at the mean, dashed vertical li
 If $X \sim \text{Binomial}(90, 0.7)$, what is $P(X = \mu)$?
 
 ```{r}
-# Live coding
+dbinom(mu, n, p)
 ```
 
 
@@ -795,7 +811,7 @@ If $X \sim \text{Binomial}(90, 0.7)$,
 what is $P(\mu - \sigma \leq X \leq \mu + \sigma)$?
 
 ```{r}
-# Live coding
+pbinom(mu + sigma, n, p) - pbinom(mu -sigma, n, p)
 ```
 
 
@@ -805,6 +821,8 @@ Find the 0.05 and 0.95 quantiles of the $\text{Binomial}(90, 0.7)$ distribution.
 
 ```{r}
 # Live coding
+qbinom(0.05, n, p)
+qbinom(0.95, n, p)
 ```
 
 # Normal Distributions
@@ -864,7 +882,7 @@ ggplot() +
   geom_norm_density(mu = 2, sigma = 1, color = "darkgreen") +
   labs(
     title = "Three Normal Distributions",
-    subtitle = "Blue: N(0, 1). Red: N(0, 0.5). Green: N(1, 1)",
+    subtitle = "Blue: N(0, 1). Red: N(0, 0.5). Green: N(2, 1)",
     y = "Density"
   ) +
   geom_hline(yintercept = 0)
@@ -1084,19 +1102,24 @@ sigma = 25
 - **Compute** the 0.975 (97.5%) quantile of X.
 
 ```{r}
-# Answer here
+qnorm(0.975, mu, sigma)
 ```
 
 - **Compute** $P(X < 75)$.
 
 ```{r}
-# Answer here
+pnorm(75, mu, sigma)
 ```
 
 - **Compute** $P(|X-\mu|>\sigma)$, with a reminder that $\mu = 100$ and $\sigma = 25$.
 
 ```{r}
-# Answer here
+left_tail = pnorm(75, mu, sigma)
+right_tail = 1 - pnorm(125, mu, sigma)
+
+left_tail + right_tail
+
+2 * left_tail
 ```
 
 ---
@@ -1113,7 +1136,7 @@ sigma = 25
 
 * To motivate $Z$'s importance, let's first consider an example.
 
-* One random variable $X \sim N(100, 25)$ takes on the value 75 Another random variable $Y \sim N(10, 7)$, with another normal distribution, takes on the value 24.
+* One random variable $X \sim N(100, 25)$ takes on the value 75. Another random variable $Y \sim N(10, 7)$, with another normal distribution, takes on the value 24.
 
 * Which value is more extremely, or less likely?
 
@@ -1125,13 +1148,13 @@ sigma = 25
 
 * $X = 75$ was $\frac{75-100}{25} = -1$ standard deviation away from its mean. (The negative means the observed value of $X = 75$, was *below* $E(X) = 100$.)
 
-* $Y = 18$ was $\frac{24-10}{7} = 2$ standard deviations away from its mean.
+* $Y = 24$ was $\frac{24-10}{7} = 2$ standard deviations away from its mean.
 
 * If instead, we had reported that $X$ was 1 standard deviation away from its mean and $Y$ was 2 standard deviations away from its mean, we would already know which is more extreme - *regardless of the context of $X$ and $Y$.
 
 * This "universal language" leads us to **standardized scores, or $Z$ scores**.
 
-> When a random variable $X$ takes on a random value $x$, its **standardized score or $Z$-score** is $z = \frac{x - \mu}{\sigma}. This tells us how extreme the point is regardless of context. 
+> When a random variable $X$ takes on a random value $x$, its **standardized score or $Z$-score** is $z = \frac{x - \mu}{\sigma}$. This tells us how extreme the point is regardless of context. 
 
 ---
 
@@ -1155,7 +1178,7 @@ $$
 P(X < a) = P(Z < \frac{a-\mu}{\sigma})
 $$
 
-*Note: I use < in the above notation, but it can be replaced with >, = $\leq$, or $\geq$.)
+*Note: I use < in the above notation, but it can be replaced with >, = $\leq$, or $\geq$.*
 
 #### Example
 
