@@ -1,0 +1,1417 @@
+---
+title: "STAT 240: Inference on Proportions"
+author: "Cameron Jones"
+date: "Spring 2024"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE,
+                      error = TRUE, fig.height = 4)
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+
+theme_set(theme_minimal())
+
+```
+
+\renewcommand{\prob}{\mathsf{P}}
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+
+# Overview
+
+## Learning Outcomes
+
+* These lectures will teach you how to:
+    - Conceptualize statistical inference on a single proportion and for a difference in proportions, through statistical models and p-values
+    - Compute a p-value for inference on a single proportion and for a difference in proportions
+
+## Preliminaries
+
+* You will need the `tidyverse` package for these lecture notes, which you should have from previous lectures.
+
+* Files to download to `COURSE/lecture/unit9-inference-proportions`:
+    - `week09-inference-proportions.Rmd`
+    - `week09-inference-proportions.html`
+    
+* Files to download to `COURSE/data` (**New file!**):
+    - `chimpanzee.csv`
+    
+* Files to download to `COURSE/scripts` (*you should already have these from previous lectures*):
+    - `viridis.R`
+    - `ggprob.R` 
+    
+## Chimpanzee Data
+
+* **Supplementary material** on the chimpanzee data can be found in [Chapter 17 of Professor Bret Larget's Course Notes and Case Studies](https://bookdown.org/bret_larget/stat-240-case-studies/chimpanzees-and-prosocial-choice.html).
+    
+* This lecture will use the data in `chimpanzee.csv`. The data is based on an experiment conducted by scientists at Emory University in 2011; though those scientists did not make their true data public, we have created a "mock" dataset which gives the same results and summary values as their data.
+
+* Two chimpanzees were put in adjacent enclosures with the ability to see and communicate with each other.
+
+* One chimpanzee, the **actor**, was given the choice to pick from a bucket of tokens which were two different colors.
+
+* The actor had previously been taught that one color would lead to the human researcher to give them (just the actor) a treat. We call this the **selfish** choice.
+
+* The other color would lead to the human researcher giving **both the actor and the partner** a treat. We call this the "**prosocial**" choice.
+
+* The **actor** was given this choice 30 times, and the number of **prosocial** and **selfish** choices were recorded.
+
+* The researchers performed this experiment with many combinations of actors, partners, and colors; including observing their behavior when the actor had **no partner**.
+
+---
+
+* Our "mock" dataset for this can be found in `chimpanzee.csv`.
+
+```{r}
+chimpanzee = read_csv("../../data/chimpanzee.csv")
+```
+
+> This dataset is at the **actor-partner** level. Every row represents one 30-trial combination of actor and partner.
+
+```{r}
+head(chimpanzee)
+```
+
+* For example, when A was paired with I, they made 22/30 prosocial choicse. When A had no partner ("none"), they made 16/30 prosocial choices.
+
+*The only exception is that G and A only completed ten trials together in the dataset.* 
+
+### Exploring the Data
+
+```{r}
+sum1 = chimpanzee %>% 
+  mutate(session_type = case_when(
+    partner == "none" ~ "no partner",
+    TRUE ~ "partner"
+  )) %>% 
+  group_by(actor, session_type) %>% 
+  summarize(prosocial = sum(prosocial),
+            selfish = sum(selfish),
+            n = prosocial + selfish,
+            pct_prosocial = 100*prosocial/n)
+sum1
+
+sum1_wide = sum1 %>% 
+  select(actor, session_type, pct_prosocial) %>% 
+  pivot_wider(names_from = session_type,
+              values_from = pct_prosocial)
+
+sum1_wide
+```
+
+- We see that every chimpanzee made the pro-social choice more than half the time when a partner was present.
+- Chimpanzee G had a smaller number of trials than the others and had no trials without a partner
+- Each partner made the pro-social choice more often with a partner than without.
+
+---
+
+```{r}
+ggplot(sum1, aes(x = actor, y = pct_prosocial,
+                 fill = session_type)) +
+  geom_col(color = "black",
+           position = position_dodge2(preserve = "single")) +
+  scale_y_continuous(labels = percent_format(scale = 1)) +
+  labs(
+    x = "Chimpanzee",
+    y = "Pro-social Choice Probability",
+    title = "Chimpanzee Pro-social Choice Comparison",
+    subtitle = "With and Without Partners",
+    fill = "Session"
+  ) +
+  theme_minimal()
+```
+
+---
+
+## Motivation
+
+> The overall goal of the study was to measure: **Is there evidence that the presence of a partner affects the true probability of the actor making the prosocial choice?**
+
+* We will return to this question eventually, but first we'll consider a simpler example.
+
+* Imagine we had observed the following data:
+
+- With NO partner: 50% prosocial choice
+- With partner: 51% prosocial choice
+
+- Would that be enough to convince you that chimpanzees are considering the presence or absence of a partner in their choice?
+
+- Probably not. You would likely conclude that the chimpanzees are just picking out of the bucket randomly, and the 1% increase in prosocial choices with a partner is purely random.
+
+- However, **the researchers actually observed the following summary data**:
+
+```{r}
+chimpanzee %>% 
+  mutate(
+    HadAPartner = (partner != "none")
+  ) %>% 
+  group_by(HadAPartner) %>% 
+  summarize(totalChoices = sum(prosocial) + sum(selfish),
+            percProsocial = 100*round(sum(prosocial)/totalChoices,3)) %>% 
+  select(HadAPartner, percProsocial, totalChoices)
+```
+
+- We observe about 59% prosocial choice with a partner, and 46% prosocial choice without a partner... is that enough to convince you?
+
+- This leads to some important questions. Where do we draw the line between evidence for a real effect and a random one? Can we ever know for sure? Can we formalize this process mathematically? How do we account for the fact there are way more trials WITH a partner than WITHOUT a partner?
+
+- Enter... **statistical inference**.
+
+# Statistical Inference
+
+## The Big Picture
+
+> **Statistical inference** is the process of estimating or drawing conclusions about **the unknown value of a parameter of a distribution** solely from data generated from that distribution.
+
+* The **parameters** of the distribution are the small number of values which define everything about the distribution; for example, $n$ and $p$ from a binomial distribution, or $\mu$ and $\sigma$ from a normal distribution.
+
+- In the last couple weeks, we have started off with a known distribution (e.g. $Binom(n, p)$, $N(\mu, \sigma)$) and calculated important features of it.
+
+- However, in the real world, we often don't know the original probability distribution; we only have some observed data, and need to go in the "other direction".
+
+## Inference Questions
+
+> **Inference questions** start with a statement that the observed data comes from some probability distribution, with a parameter of interest; this statement is called a **statistical model**. Then, we evaluate the assumptions of the model. We then seek to estimate or draw a conclusion about that parameter of interest.
+
+---
+
+* For example, with the chimpanzee data, an example of a statistical model is:
+
+##### Defining Variables
+
+Let $X$ be the number of observed prosocial choices among $n = 610$ chimpanzee trials with a partner.
+
+Let $p$ be the unknown, true, underlying probability of any chimpanzee making the prosocial choice in a single trial with a partner. (Notice that we are assuming the same true $p$ for all chimpanzees, which may not be true.)
+
+##### Model Statement
+
+Then,
+
+$$
+X \sim Binom(610, p)
+$$
+
+##### Model Assumptions
+
+- We may declare that $X$ follows a binomial distribution only if we accept the four binomial assumptions:
+
+- **B**: The chimpanzee either makes the prosocial choice or does not.
+- **I**: Each trial can be assumed to be independent of each other. (Remember, more art than science.)
+- **N**: We have a fixed number of trials, $n = 610$.
+- **S**: Each trial can be assumed to have the same true $p$ of "success".
+
+##### The Inference Question
+
+* A question we may be interested in is:
+
+* **Are the chimpanzees truly picking randomly, or are they more likely to pick prosocially?**
+
+* This can be reworded in terms of the above statistical model:
+
+* **What is our estimate of the unknown value of $p$?** (We'll answer this with a confidence interval.)
+
+* **Is the unknown value of $p$ 0.5 or greater than 0.5?** (We'll answer this with a hypothesis test.)
+
+> Many real questions can be rephrased as a question about the parameter of a true, unknown probability distribution. 
+
+## Populations and Samples
+
+> The **data we actually do observe** is called a **sample**, and it is a subset of all real or hypothetical units of interest. We call the full set the **population**.
+
+- In this sense, our **population** is the *hypothetical set of datasets we would get if we repeated this experiment infinitely many times*. More on this confusing wording in a little bit.
+
+- The data we actually do observe may be something that was extremely unlikely to happen given the unknown parameters, (for example, if $p$ truly was 0.2, then it is possible but extremely unlikely to actually observe 59% prosocial w/ a partner), or it could be exactly what we expect to happen (e.g. $p$ truly is 0.6, we observe 59%).
+
+- We will never know which is the actual truth - if we did, then we would know the parameter value, and that takes away the whole point.
+
+---
+
+* More on populations:
+
+    - Sometimes, the **population** and **sample** are very easy to define.
+    - For example, forecasting the result of an election literally surveys a **sample** of voters (often a few thousand) who they are going to vote for, and then makes conclusions about who the **population** (millions of voters) is going to vote for.
+    
+    - However, it is often the case they are not conceptually easy to wrap one's head around, such as in this case.
+    - For example, the population might be "the hypothetical set of infinitely many NFL games", or "every theoretical January that could've happened".
+    
+* This is one of the biggest hurdles to understanding statistics, and sometimes why it gets a bad reputation. However, the following remains true: 
+    
+> The **population of interest often is purely hypothetical**, but asking questions about its probability distribution can lead to real, useful conclusions. 
+
+# Point Estimates and P-Hat
+
+## Focusing on Chimpanzee A
+
+- Some of the binomial assumptions in the original model we provided were a little sketchy. For example, some chimps may just be more selfish than others (violates **S**ame $p$ assumption), and chimps may treat their partner the way they are treated as a partner (violates **I**ndependence).
+
+- For now, we will begin just by looking at chimpanzee A's trials; because chimp A likely has a constant underlying $p$ throughout the experiment, and went first, so could not be reacting to external factors.
+
+```{r}
+chimpanzee %>%
+  filter(actor == "A") %>% 
+  mutate(HadAPartner = (partner != "none")) %>% 
+  group_by(HadAPartner) %>% 
+  summarize(
+            prosocialChoices = sum(prosocial),
+            totalChoices = prosocialChoices + sum(selfish),
+            percProsocial = 100*round(prosocialChoices/totalChoices,3)) %>% 
+  select(HadAPartner, percProsocial, prosocialChoices, totalChoices)
+```
+
+* Our observed data here, among trials with a partner (as it relates to the true, underlying binomial distribution) is $X = 60$ prosocial choices from $n = 90$ trials.
+   
+## Point Estimates
+
+* The most basic, introductory question we can ask is: **What's our best guess of the true value of $p$, based on our data?**
+
+> A **point estimate** is a value calculated from your sample data which estimates the true value of a parameter.
+
+* As you might intuitively expect, our **point estimate** for the true $p$ is $\hat{p}$; pronounced "p hat", this is the **observed proportion of successes**, which in this case are prosocial choices.
+
+*Note: Across much of statistics, "hats" are used to indicate a point estimate. This is one of my favorite things about statistics.*
+
+* Here, our estimate of the true, unknown $p$ is $60/90 \approx 0.67$.
+
+* All point estimates are imperfect, due to the **randomness in the original distribution**. This randomness in the original distribution leads to the point estimate having a **sampling distribution**.
+
+* Let's explore the sampling distribution of $\hat{p}$ to indicate how uncertain this estimate really is.
+
+## Sampling Distribution of P-Hat
+
+* Through theory, we can derive that:
+
+> Consider sampling $n$ points from $Binom(size, p)$, and then taking the proportion of successes among those $n$ points, call it $\hat{p}$. Then, $\hat{p} \sim N(p, \sqrt{\frac{p(1-p)}{n}}$).
+
+* Notice: The expected value of $\hat{p}$ is $p$! This is a desirable property of estimators generally.
+
+* Notice: The standard error of $\hat{p}$ is $\sqrt{\frac{p(1-p)}{n}}$, which decreases when $n$ increases. More data, less variance in the predictions!
+    - Note that this is based on the true, unknown $p$, which is a bummer. We will discuss later that we must estimate the standard error by replacing $p$ with $\hat{p}$.
+
+> We refer to the standard deviation of a sampling distribution with a different name: **standard error**, instead of "deviation". This refers to the fact that there is a true, correct answer, so any aberration from it is an "error".
+
+### Verify with Simulation
+
+- The proof of the above is, once again, beyond this class, but we'll verify this fact through simulation.
+
+- With $n = 90$, let's examine the distribution of $\hat{p} = X/n$ when $X \sim Binom(n, 60/90)$.
+
+- Choose $B=1,000,000$ to repeat one million times (perhaps excessive).
+- Set $p=60/90$.
+- Set $n=90$.
+- We will generate $B$ simulated random variables, $X^*_1,\ldots,X^*_B$ where each $X_i \sim \text{Binomial}(90, 60/90)$.
+
+```{r}
+## simulation parameters
+B = 1000000
+n = 90
+x = 60
+p = x/n
+
+## do the simulation
+sim = tibble(
+  x_star = rbinom(B, n, p),
+  p_hat = x_star / n)
+
+## summarize the simulation
+sim_summary = sim %>% 
+  summarize(mean = mean(p_hat),  ## this should be very close to p=60/90
+            sd = sd(p_hat)) ## this should be very close to sqrt(2/3 * 1/3 / 90) = 0.0497
+sim_summary
+
+## Graph of simulated p_hat values
+ggplot(sim, aes(x = p_hat, y=after_stat(density))) +
+  geom_histogram(center = 60/90, binwidth = 1/90,
+                 color = "black", fill = "firebrick") +
+  xlab("sample proportion (p-hat)") +
+  theme_minimal() # + geom_norm_density(mu=p, sigma=sqrt(p*(1-p)/n),color="blue", size=2) 
+# uncomment the geom_norm_density call to overlay the theory!
+
+```
+
+* We have verified that the distribution is normal, as expected - and the parameters align with what we expected from theory.
+
+---
+
+* Now that we know the sampling distribution of $\hat{p}$, we can make a **probabilistic estimate of the region that the true $p$ is in, called a confidence interval**.
+
+# Confidence Intervals: Introduction
+
+> A **confidence interval** is a two-part estimate of where the true value of a parameter is. The first part is a numeric region where we believe the true parameter's value is, and the second part is the confidence level associated with that region.
+
+* Once again, we can never be sure of the true value, we can only hope to estimate it.
+
+* Furthermore, with confidence intervals, we can customize how confident we want to be in our response. 
+    - "So then why wouldn't we just take estimates with really, really high confidence?"
+    - Because those tend not to be useful.
+    - For example, for any true proportion, I can say with 100% confidence that it is between 0 and 1.
+    - As you sacrifice some confidence, your interval becomes narrower and more useful; there is a trade-off here that we need to balance; confidence and usefulness.
+    - Most statisticians like to compute 95% or 90% confidence intervals.
+  
+* We will see this numerically in just a moment.
+
+---
+
+### The Idea
+
+* The idea behind confidence intervals is slightly involved, so bear with me.
+
+* Let's say that the **true** value of $p$ we are trying to calculate is **40%**.
+
+* We try to estimate this "unknown" $p$ by taking one draw from $Binom(20, p)$ and observing the sample proportion of successes, $\hat{p}$.
+
+* With true $p = 0.4$ and $n = 20$, we know the sampling distribution of $\hat{p}$ from above:
+
+```{r}
+true_p = 0.4
+n = 20
+stdError = sqrt(true_p * (1-true_p)/n) %>% round(2)
+
+gnorm(true_p, stdError)
+```
+
+* Without knowing what random $\hat{p}$ you are about to observe, we need to establish a procedure to draw a **region around that point estimate** with a known probability of containing the true value (but it cannot be based on that true value).
+
+* The first thing to consider is that we **don't know the true value of $p$**, so this region cannot be based on $p$. It must only be based on our sample data.
+
+* The second thing to note is that, by extension, we **don't know which side of $p$ our $\hat{p}$ will end up on**, so this region has to be symmetric in both directions.
+
+* The last thing to consider is that the **expected value of $\hat{p}$ is $p$**, so it makes sense to **center our interval at $\hat{p}$**.
+
+---
+
+* How far out we extend our region in both directions then depends on **how much confidence you want to have**.
+
+* Let's say we want to be **95% confident** that our region contains the true value of $p$.
+
+* The width of our confidence interval should then be **the width of the region which contains 95% of the area on the sampling distribution**.
+
+* Visually, we want this length:
+
+```{r, echo = FALSE}
+# Suppressed in the knitted file to not distract from the main point, which is the graph
+conf.level = 0.95
+appropriate.quantile = conf.level + (1 - conf.level)/2
+leftEndpoint = true_p - qnorm(appropriate.quantile) * stdError
+rightEndpoint = true_p + qnorm(appropriate.quantile) * stdError
+```
+
+
+```{r}
+# leftEndpoint and rightEndpoint calculated in an invisible chunk above, going through how to calculate them now
+gnorm(true_p, stdError) +
+  geom_norm_fill(true_p, stdError, a = leftEndpoint, b = rightEndpoint, alpha = 0.5) +
+  annotate("segment", x = leftEndpoint, xend = rightEndpoint, y = 0.25, yend = 0.25, arrow = arrow(ends = "both")) +
+  annotate("text", x = true_p, y = 0.4, label = "Contains 95% of area")
+  
+  
+```
+
+* How do we compute that length for any distribution?
+
+* Take a look at the right side of that interval. This interval is **central** and the distribution is **symmetric**, so there is 2.5% area on either side of the interval. (2.5 + 95 + 2.5 = 100%).
+
+* That means there is 2.5 + 95 = 97.5% area **to the left** of the right endpoint. (The 95% region above, and the small 2.5% tail we didn't include earlier)
+
+```{r}
+gnorm(true_p, stdError) +
+  geom_norm_fill(true_p, stdError, b = rightEndpoint, alpha = 0.5) +
+  annotate("segment", x = 0, xend = rightEndpoint, y = 0.25, yend = 0.25, arrow = arrow(ends = "first")) +
+  annotate("text", x = true_p, y = 0.4, label = "Contains 97.5% of area")
+  
+```
+
+* This means the right endpoint is the **97.5% quantile** of this normal distribution!
+
+```{r}
+qnorm(0.975, true_p, stdError)
+```
+
+* The general adjustment here is that if your confidence level is $\alpha$, then the right endpoint is the $\alpha + \frac{1-\alpha}{2}$ quantile of the sampling distribution. (Start at $\alpha$, and then go halfway towards 1.)
+
+```{r}
+qnorm(conf.level + (1 - conf.level) / 2, true_p, stdError)
+```
+
+* Remember through **standardization** we can write this in terms of a quantile from the standard normal distribution:
+
+```{r}
+true_p + qnorm(conf.level + (1 - conf.level) / 2) * stdError
+```
+
+* Finally, notice that `true_p` is the **center** of our original interval! This means that we have derived the **distance we need to go in each direction** as `qnorm(conf.level + (1 - conf.level) / 2) * stdError`!
+
+```{r}
+# I refer to "confidence level" with C here.
+gnorm(true_p, stdError) +
+  geom_norm_fill(true_p, stdError, a = leftEndpoint, b = rightEndpoint, alpha = 0.5) +
+  annotate("segment", x = true_p+0.005, xend = rightEndpoint, y = 0.25, yend = 0.25, arrow = arrow(ends = "last", length = unit(.2,"cm"))) +
+  annotate("text", x = (true_p + rightEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) + SE", size = 3)+
+  annotate("segment", x = leftEndpoint, xend = true_p - 0.005, y = 0.25, yend = 0.25, arrow = arrow(ends = "first", length = unit(.2,"cm"))) +
+  annotate("text", x = (true_p + leftEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) + SE", size = 3)
+```
+
+* Finally, putting it all together, going out this far in each direction from whatever random $\hat{p}$ we get will, by definition, contain the true $p$ 95% of the time! (or whatever your desired confidence was)
+
+* This distance, `qnorm(C + (1-C)/2) * SE`, is called the **margin of error**.
+
+*Note: For a 95% confidence interval on a normal sampling distribution, `qnorm(0.95 + (1 - 0.95)/2)` is about 1.96. We will frequently refer to this number.*
+
+## The General Form for Confidence Intervals
+
+* More generally, confidence intervals take the following form:
+
+$$
+\text{Point Estimate } \pm \text{ Quantile Confidence Score * Standard Error of PE}
+$$
+
+* Where the **point estimate** is your estimate of the true parameter based on your data... (such as the sample proportion $\hat{p}$ for the true $p$, or the sample mean $\bar{x}$ for the true $\mu$)
+
+* ... the **quantile confidence score** is the ($\alpha$ + (1-$\alpha$)/2) quantile of the sampling distribution...
+
+* and the **standard error of the point estimate** is a known formula based on what point estimate you are using.
+
+> The second part of the equation, "Quantile Confidence Score * Standard Error of PE", is collectively referred to as the **margin of error**.
+
+## Visualization
+
+* I have written the function `visualizeProportionCI` just as a visual aid to help you understand confidence intervals.
+
+* You give it the **true p** you are trying to estimate and a **sample size**, and it will generate a random point estimate and plot the confidence interval over it.
+
+```{r}
+visualizeProportionCI = function(true_p, sample_size, conf.level = 0.95, theory = TRUE, wald = FALSE) {
+  stdError = sqrt(true_p * (1 - true_p) / sample_size)
+  
+  # calculate true sampling distribution curve
+  samplingDistribution = tibble(
+    x = seq(true_p - 3*stdError, true_p + 3*stdError, length.out = 50),
+    y = dnorm(x, true_p, stdError)
+  )
+  
+  # calculate random point estimate, associated confidence interval
+  moeLabel = paste0("Interval width: This region contains ", 100*conf.level, "% of area")
+  point_estimate = rnorm(1, true_p, stdError)
+  if (wald) {
+    stdError = sqrt(point_estimate * (1 - point_estimate)/sample_size)
+    moeLabel = paste0("ESTIMATE: This region (on avg.) contains ", 100*conf.level, "% of area")
+  }
+  moe = qnorm(1 - (1-conf.level)/2) * stdError
+  ciLeft = point_estimate - moe
+  ciRight = point_estimate + moe
+  
+  # encode confidence interval as green if it contains the true parameter, red if it does not
+  myColor = ifelse(between(true_p, ciLeft, ciRight), "chartreuse3", "red")
+  
+  myAlpha = 0.4
+  # for more "realistic" graphing, remove the color and the helpful visuals
+  if (!theory) {
+    myColor = "black"
+    myAlpha = 0
+  }
+
+  helpfulY = dnorm(true_p, true_p, stdError)/20 # helpful margin to keep things scaled nicely graphically
+  moeY = dnorm(true_p + moe, true_p, stdError) # y level of MOE visual
+  
+  ggplot() +
+    # underlay sampling distribution
+    geom_line(aes(x, y), samplingDistribution, color = "gray", alpha = 2*myAlpha) +
+    geom_hline(yintercept = 0) +
+    
+    # add true parameter value visual
+    geom_vline(xintercept = true_p, linetype = "dashed", color = "blue", linewidth = 1.5, alpha = myAlpha) +
+    annotate("text", x = true_p - stdError/5, y = dnorm(true_p, true_p, stdError) - helpfulY, color = "blue", alpha = myAlpha, angle = 90, hjust = "right", vjust = "top", label = "True Parameter", size = 6) +
+    
+    
+    # annotate margin of error visual and label
+    annotate("segment", x = true_p - moe, xend = true_p + moe, y = moeY, yend = moeY, arrow = arrow(ends = "both", length = unit(.2, "cm")), alpha = myAlpha) +
+    annotate("text", x = true_p - conf.level*moe, y = moeY + helpfulY/2, hjust = "left", vjust = "bottom", label = moeLabel, alpha = myAlpha) +
+    
+    # annotate point estimate and label
+    annotate("segment", x = point_estimate, xend = point_estimate, y = 0, yend = helpfulY*2, size = 2) +
+    annotate("text", x = point_estimate, y = -helpfulY, label = "PE", size = 4) +
+    
+    # annotate confidence interval
+    annotate("segment", x = ciLeft, xend = ciRight, y = helpfulY, yend = helpfulY, color = myColor, size = 1.5, arrow = arrow(ends = "both", length = unit(.2, "cm"))) +
+    
+    annotate("text", x = true_p + stdError, y = dnorm(true_p, true_p, stdError), label = paste0("Sampling Dist: N(", round(true_p, 2), ", ", round(stdError, 2), ")"), alpha = myAlpha) +
+    
+    theme_minimal() + 
+    theme(
+      panel.grid = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_text(size = 10)) + 
+    
+    labs(
+      x = "Potential Values of p",
+      y = ""
+    )
+}
+
+```
+
+* For example, here's a random point estimate and associated confidence interval of our true $p = 0.4$ with $n = 20$ at confidence level 95%:
+
+```{r}
+visualizeProportionCI(true_p = 0.4, sample_size = 20, conf.level = 0.95)
+```
+
+* Watch our interval width **decrease** (see the sampling error and the labels on the x axis decrease) as we increase sample size:
+
+```{r}
+visualizeProportionCI(true_p = 0.4, sample_size = 200, conf.level = 0.95)
+```
+
+* Finally, notice that if we were to decrease our **confidence level**, our interval would get **smaller**, and therefore be less likely to contain the real $p$.
+
+```{r}
+# I strongly encourage you to run this a few times in your console to watch its behavior over many runs! Try to get one which doesn't contain the true p!
+visualizeProportionCI(true_p = 0.4, sample_size = 200, conf.level = 0.6)
+```
+
+* In practice, we do not know what the true value of $p$ is, so we just get a "blind" confidence interval; you can see this with the `theory = FALSE` argument to the `visualizeProportionCI` function.
+
+```{r}
+visualizeProportionCI(true_p, sample_size = 20, theory = FALSE)
+```
+
+
+## P-Hat Adjustments
+
+* However, we still have a problem.
+
+* The confidence interval for $p$ is based on $SE(\hat{p}) = \sqrt{\frac{p(1-p)}{n}}$... which is based on $p$, which we don't know.
+
+* Luckily, statisticians have come up with a couple workarounds for this.
+
+### The Wald Adjustment
+
+> The **Wald adjustment** to $SE(\hat{p})$ replaces the true $p$ with $\hat{p}$.
+
+* We are estimating the **true standard error**, based on $p$, with a **sample-based version**, based on $\hat{p}$. This amounts to **estimating** how wide our interval should be based on our data.
+
+* Statisticians have worked out that the Wald adjustment preserves the confidence level on average, so we can continue to interpret our confidence level the same way. 
+
+* Use `wald = TRUE` in `visualizeProportionCI` to show this.
+
+* The estimate of how wide the interval should be will **a) change from run to run** and will usually **b) be just a little off from the "correct" width, because it is an estimate**.
+
+```{r}
+visualizeProportionCI(true_p = 0.4, sample_size = 200, conf.level = 0.95, wald = TRUE)
+```
+
+* With the Wald adjustment, we now have a formula for the confidence interval for a single proportion based on **just our data**.
+
+### Wald CI For a Proportion
+
+$$
+\hat{p} \pm \text{qnorm}(\alpha+(1-\alpha)/2) * \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}
+$$
+
+* This formula will contain the true value of $p$ C% of the time.
+
+---
+
+* Harken back to our chimpanzee example, where we don't know the true $p$.
+
+```{r}
+# Three inputs; successes, sample size, confidence level
+x = 60
+n = 90
+conf.level = 0.95
+
+# Calculate Wald confidence interval
+phat = x/n
+se = sqrt(phat * (1 - phat)/n) # Wald adjustment replaces p with phat
+moe = qnorm(conf.level + (1 - conf.level)/2) * se
+  
+left = phat - moe
+right = phat + moe
+  
+c(left, right)
+```
+
+#### Interpretation
+
+* We could say that we are **95% confident** that the **true value of $p$** is between 56.9% and 76.4%, with the Wald adjustment.
+
+* However, that doesn't mean much to the real people making decisions who don't care about statistics. What they will care about is interpreting the confidence interval **in context**, as below.
+
+> We are **95% confident** that the **true probability of a chimpanzee making a prosocial choice with a partner** is between 56.9% and 76.4% (with the Wald adjustment).
+
+### Agresti-Coull CI For a Proportion
+
+* The **Wald** estimate is pretty solid and is widely used, but there is another adjustment which is slightly better at handling extreme cases.
+
+> The **Agresti-Coull* adjustment adds two successes and two failures to the dataset artificially. This changes $X$ to $X+2$ and $n$ to $n+4$. These changes carry through to the point estimate, which is passed into the standard error.
+
+* The Agresti-Coull adjustment **pulls \hat{p} towards 0.5**, especially away from the extremes of 0 and 1, which tends to be a more stable, reliable estimate.
+     - To motivate this, consider estimating the probability a baseball player hits a home run on a given pitch. You watch this player take 10 pitches, and they never hit a home run. 
+     - Your $\hat{p}$ is 0, and your $SE(\hat{p})$ is therefore 0, and the math breaks down.
+     - The Agresti-Coull adjustment prevents this, and extreme cases like it.
+
+$$
+\hat{p}_{AC} = \frac{X + 2}{n +4}
+$$
+
+$$
+\hat{p}_{AC} \pm \text{qnorm}(\alpha+(1-\alpha)/2) * \sqrt{\frac{\hat{p}_{AC}(1-\hat{p}_{AC})}{n+4}}
+$$
+
+---
+
+* The Wald 95% CI was 56.9% to 76.4%.
+
+* Here is the Agresti-Coull CI:
+
+```{r}
+# Three inputs; successes, sample size, confidence level
+x = 60
+n = 90
+conf.level = 0.95
+
+# Calculate AC confidence interval
+x_adjusted = x+2 # Added two successes
+n_adjusted = n+4 # Added four data points total
+phat = x_adjusted/n_adjusted
+se = sqrt(phat * (1 - phat)/n_adjusted)  # Changes carry through to p_hat and n_adjusted
+moe = qnorm(conf.level + (1 - conf.level)/2) * se
+  
+left = phat - moe
+right = phat + moe
+  
+c(left, right)
+```
+
+#### Interpretation
+
+> We are **95% confident** that the **true probability of a chimpanzee making a prosocial choice with a partner** is between 56.4% and 75.5% (with the Agresti-Coull adjustment).
+
+* This interval is shifted a little closer to 50% than the Wald one was.
+
+### Why Agresti-Coull?
+
+* Earlier I claimed that the Agresti-Coull adjustment was "better" than the Wald adjustment. What do we mean by that?
+
+* Both "adjustments" mean that the probability the interval contains the true $p$ (called the "coverage probability") won't be *exactly* your confidence level $\alpha$; it will fluctuate slightly around $\alpha$.
+
+* The only truly 95% confidence interval uses the real $p$, which is pointless. However...
+
+> The Agresti-Coull adjustment, **in practice**, usually leads to intervals with HIGHER than $\alpha$ coverage probability, especially for extreme $\hat{p}$. The Wald adjustment **in practice** usually leads to lower than $\alpha$ coverage probability, especially for extreme $\hat{p}$.
+
+* The following graphs demonstrate this point; you aren't responsible for knowing this code or graph at a deep level, just know that the above statement is backed up by the following analysis.
+
+```{r direct-compare-wald, echo = FALSE}
+
+# This chunk is hidden in the knitted file because it distracts from the main point, but feel free to dig through it if you want :)
+
+# Also; you can visually collapse this chunk by clicking the tiny down arrow next to the ``` that starts this chunk, next to the line number! It's nice to not have to scroll past 100+ lines every time.
+
+binom_se =  function(n, p){
+  return ( sqrt( p*(1-p)/n) )
+}
+binom_ci = function(est, se, conf=0.95){
+  z = qnorm(1 - (1 - conf)/2)
+  me = z * se
+  ci = est + c(-1,1)*me
+  return(ci)
+}
+wald_ci = function(n, x, conf=0.95)
+{
+  p_hat = x/n
+  se = binom_se(n, p_hat)
+  ci = binom_ci(p_hat, se, conf)
+  return ( ci )
+}
+
+agresti_ci = function(n, x, conf=0.95)
+{
+  p_tilde = (x+2)/(n+4)
+  se = binom_se(n+4, p_tilde)
+  ci = binom_ci(p_tilde, se, conf)
+  return ( ci )
+}
+
+calc_wald = function(n, p, conf=0.95)
+{
+  z =  qnorm(1 - (1-conf)/2)
+  df = tibble(
+    x = 0:n,
+    d = dbinom(x,n,p), # we use dbinom instead of simulating with rbinom
+    p_hat = x/n,
+    se = sqrt( p_hat*(1-p_hat)/n ),
+    a = p_hat - z*se,
+    b = p_hat + z*se)
+  prob = df %>%
+    filter(a < p & p < b) %>% 
+    summarize(prob = sum(d)) %>% #prob of generating an x that results in a CI that contains the true p
+    pull(prob)
+  return ( prob )
+}
+
+capture_wald = function(n, seq_p, conf=0.95)
+{
+  prob = numeric(length(seq_p))
+  for ( i in seq_along(seq_p) )
+  {
+    prob[i] <- calc_wald(n,seq_p[i],conf)
+  }
+  df = tibble(p = seq_p,prob=prob)
+  return ( df )
+}
+
+plot_wald = function(n, seq_p, conf=0.95,...)
+{
+  capture_wald(n, seq_p) %>%
+  ggplot(aes(x=p, y=prob)) +
+    geom_line(...) +
+    geom_hline(yintercept = conf, linetype = "dashed") +
+    ggtitle("Wald Method Capture Probability",
+            subtitle = paste("n = ",n)) +
+    theme_bw()
+}
+
+n = 90
+p = seq(0.1, 0.9, length.out = 201)
+
+plot_wald(n, p, conf=0.95, color="red") 
+
+calc_agresti = function(n, p, conf=0.95)
+{
+  z = qnorm(1 - (1-conf)/2)
+  df = tibble(
+    x = 0:n,
+    d = dbinom(x,n,p),
+    p_tilde = (x+2)/(n+4),
+    se = sqrt( p_tilde*(1-p_tilde)/(n+4) ),
+    a = p_tilde - z*se,
+    b = p_tilde + z*se)
+  prob = df %>%
+    filter(a < p & p < b) %>%
+    summarize(prob = sum(d)) %>%
+    pull(prob)
+  return ( prob )
+}
+
+capture_agresti = function(n,seq_p,conf=0.95)
+{
+  prob = numeric(length(seq_p))
+  for ( i in seq_along(seq_p) )
+  {
+    prob[i] <- calc_agresti(n,seq_p[i],conf)
+  }
+  df = tibble(p = seq_p, prob = prob)
+  return ( df )
+}
+
+plot_agresti = function(n, seq_p, conf=0.95, ...)
+{
+  capture_agresti(n,seq_p) %>%
+  ggplot(aes(x=p,y=prob)) +
+    geom_line(...) +
+    geom_hline(yintercept = conf, linetype = "dashed") +
+    ggtitle("Agresti-Coull Method Capture Probability",
+            subtitle = paste("n = ",n)) +
+    theme_bw() 
+}
+
+plot_agresti(n, p, color="red") 
+```
+
+* The graphical evidence suggests that the Agresti-Coull adjustment is a better choice than the Wald adjustment.
+
+# Confidence Intervals: TL;DR
+
+* This section does not contain any *new* material; it just collects all the most important parts of our long introduction into one place for you.
+
+## General Form 
+
+$$
+\text{Point Estimate } \pm \text{ Quantile Confidence Score * Standard Error of PE}
+$$
+
+* Where the **point estimate** is your estimate of the true parameter based on your data... (such as the sample proportion $\hat{p}$ for the true $p$, or the sample mean $\bar{x}$ for the true $\mu$)
+
+* ... the **quantile confidence score** is the ($\alpha$ + (1-$\alpha$)/2) quantile of the sampling distribution...
+
+* and the **standard error of the point estimate** is a known formula based on what point estimate you are using.
+
+> The second part of the equation, "Quantile Confidence Score * Standard Error of PE", is collectively referred to as the **margin of error**.
+
+---
+
+## Single Proportion Confidence Interval
+
+* For estimating the true $p$, the point estimate is $\hat{p} = X/n$, the sample proportion.
+    - When making the **Agresti-Coull adjustment**, your point estimate is $\hat{p}_{AC} = \frac{X+2}{n+4}$.
+
+* The sampling distribution of $\hat{p}$ is normal, so the quantile confidence score is `qnorm(C + (1-C)/2)`; for the common confidence level $\alpha = 0.95$, this value is `qnorm(0.975) = 1.96`.
+    - This only depends on your confidence level - not any adjustments you make or even the data you observe.
+
+* The standard error of $\hat{p}$ is based off of $p$ which we don't know.
+    - If we are just making the Wald adjustment, the standard error is $\sqrt{\frac{\hat{p}(1-\hat{p})}{n}}$.
+    - However, when we make the **Agresti-Coull adjustment** is $\sqrt{\frac{\hat{p}_{AC}(1-\hat{p}_{AC})}{n+4}}$.
+
+# Hypothesis Testing and P-Values
+
+> The **goal of confidence intervals** was to **estimate the value of an unknown parameter**.
+
+> The **goal of hypothesis testing** is to show that the value of an unknown parameter is **very likely NOT some suggested value**. 
+
+* Confidence intervals and hypothesis testing are mathematically intertwined, but they produce two very different things.
+
+* As such, they answer two different types of questions:
+
+* Confidence intervals answer questions like: **"What is our estimate of the unknown value of $p$?"**
+
+* Hypothesis tests answer questions like: **"Is the unknown value of $p$ 0.5 or greater than 0.5?"**
+
+---
+
+## The Big Idea: Contradiction
+
+* Hypothesis testing works through a logical mechanism called **contradiction**. If you have taken a math course that has used contradiction before, I am misusing the term slightly. This is because in statistical inference, we can't *prove* anything persay, only show things are extremely unlikely.
+
+> We cannot prove directly that the true value $p > 0.5$. We will **instead** set out to **disprove the statement $p = 0.5$** in a way that gains evidence for our actual goal of showing $p > 0.5$.
+
+---
+
+* **Mathematical example:**
+
+* Say we observe $\hat{p} = 0.6$. We want to show that this proves the true $p > 0.5$. Instead, what we will do is assume $p$ really is $0.5$, and from there show that getting $\hat{p} = 0.6$ is incredibly unlikely from an experiment where the true $p = 0.5$.
+
+---
+
+* **Real world example:**
+
+* You are playing a game of darts with your friend. Your friend says they have never played darts before, but proceeds to hit three bullseyes in a row.
+
+* You wonder if they *have*, in fact, played darts before. You do this by saying "If my friend really has never played before, how likely is it they would get three bullseyes in a row?"
+
+* It is extremely unlikely for your friend to get three bullseyes in a row having never played darts. However, they DID get those bullseyes.
+
+* Therefore, we **infer** (hence statistical "inference") that the original assumption of them never playing darts before was **wrong**, so they have indeed played before. 
+
+* Of course, the trust you have in your friend would likely override this statistical anomaly, and that's why statistics isn't a fun thing to talk about at parties.
+
+## Step 1: Model Statement
+
+*All of the steps will be combined into a "Hypothesis Testing: TL;DR" section at the end.* 
+
+> Just like a confidence interval, hypothesis testing step 1 requires us to state a **statistical model** for the data, with defined variables, a model statement, and checking of assumptions.
+
+* We will return to the chimpanzee A data as an example, who picked the prosocial choice 60 times out of 90 total trials with a partner.
+
+##### Defining Variables
+
+Let $X$ be the number of observed prosocial choices among $n = 90$ chimpanzee A trials with a partner.
+
+Let $p$ be the unknown, true, underlying probability of chimpanzee A making the prosocial choice in a single trial with a partner. (*This is the parameter of interest*.)
+
+##### Model Statement
+
+With these definitions,
+
+$$
+X \sim Binom(90, p)
+$$
+
+##### Model Assumptions
+
+- We may declare that $X$ follows a binomial distribution only if we accept the four binomial assumptions:
+
+- **B**: Chimpanzee A either makes the prosocial choice or does not.
+- **I**: Each trial can be assumed to be independent of each other.
+- **N**: We have a fixed number of trials, $n = 610$.
+- **S**: Each trial can be assumed to have the same true $p$ of "success".
+
+## Step 2: State Hypotheses
+
+* Hypothesis testing is defined in terms of two important statements: the **null hypothesis** and the **alternative hypothesis**.
+
+> The **null hypothesis** (for the purposes of this class) is always of the form `true parameter value = some number`, and captures the idea that there is **no meaningful pattern**, or **no meaningful relationship**, et cetera.
+
+> The **alternative hypothesis** is of the form `true parameter value \neq that same number` or `true parameter value > that same number` or `true parameter value < that same number`. It captures the idea that there is **is a meaningful pattern or relationship** in your data. 
+
+* The alternative is usually the statement we WANT to prove, but have to show indirectly through disproving the null.
+
+* With the chimpanzee data, we can test the null hypothesis that $p = 0.5$; the idea that the chimps are picking randomly between the colors, they really aren't considering their partner at all.
+
+* The alternative hypothesis, or the idea that the chimps ARE picking prosocially more often than random, is $p > 0.5$.
+
+* We write in statistical notation:
+
+$$
+H_0: p = 0.5
+$$
+
+$$
+H_A: p > 0.5
+$$
+
+## Step 3: Test Statistic and Null Distribution
+
+* To find statistical evidence AGAINST the null hypothesis:
+
+> First, **Assume the null hypothesis is true**. In this case, assume $p = 0.5$.
+
+> Second, we need a **test statistic**; some statistic from the sample for which we know the probability distribution. Then, we plug the null value of the parameter into it, in this case replacing $p$ with $0.5$.
+
+- When we plug in the null value, we call that resulting distribution the **null distribution**.
+
+* The **test statistic** will become a little more involved as we get deeper into the class, but in this case it comes straight from our model: we know that the observed number of successes $X \sim Binom(90, p)$.
+
+* When we assume $p = 0.5$, this turns into $X \sim Binom(90, 0.5)$. That is our **null distribution**.
+
+## Step 4: Identify Relevant Outcomes from Data + Alt. Hyp.
+
+* We now bring in our observed data; in this case $X = 60$.
+
+* We need to consider both the **observed data** and the **alternative hypothesis** (remember, the statement we actually want to prove) to determine the following set:
+
+> Which values of the test statistic that are **as or less likely than the one we observed** (on the null distribution from step 3) also consitute **evidence for the alternative hypothesis?**
+
+* Let's look at the null distribution below, and annotate the observed value of our test statistic:
+
+```{r}
+null_p = 0.5
+
+gbinom(90, null_p, scale = TRUE) +
+  geom_vline(xintercept = 60, color = "red")
+```
+
+* The values which are **as or less likely** than our observed 60 are those greater than or equal to 60, AND those less than or equal to 30. (Because the null distribution among is symmetric, $p = 0.5$.)
+
+* Recall that the alternative hypothesis was $p > 0.5$. The lower outcomes don't constitute evidence for a large $p$, but the higher outcomes do. Therefore, our set of interest is **values greater than or equal to 60**.
+
+## Step 5: Calculate P-Value
+
+> The **p-value** of a hypothesis test is the **probability of observing a value of the test statistic as or more extreme than the one we did**, on the null distribution, with "extreme" defined by the null hypothesis.
+
+*Note: p-value is the term specifically for the probability calculated in a hypothesis test. This is sometimes confused with "the value of $p$", the true parameter value we are interested in.*
+
+* This is the **probability of observing an outcome in the set identified in step 4.** Note that since this is a probability, it should be between 0 and 1. Some p-values will get very very low, but should never be negative or greater than 1.
+
+* On $Binom(90, 0.5)$ (the null distribution), the probability of getting 60 or greater should be small, according to the picture in step 4.
+
+```{r}
+# X ~ Binom(90, 0.5): 
+# P(X >= 60) = P(X > 59) = 1 - P(X <= 59) = 1 - pbinom(59, 90, 0.5)
+
+1 - pbinom(59, 90, 0.5)
+```
+
+* The **p-value** for this test is 0.001.
+
+* This captures **the likelihood of observing the data we did, or something more extreme, given that the null hypothesis is true.**
+
+* A low p-value causes us to infer that our original assumption was wrong; i.e. the null hypothesis is probably wrong.
+
+*Note: We can never know that the null is wrong. It is still possible for your friend to play darts for the first time and throw three bullseyes; just incredibly unlikely.*
+
+## Step 6: Interpret In Context
+
+> We have never **proven** the null hypothesis false, nor the alternative hypothesis true. We have merely succeeded or failed in **finding strong evidence against the null**.
+
+* How can we tell if we have found strong evidence or not? What constitutes a "low enough" p-value?
+    - This question is the subject of much debate in statistics, which is currently taking a good hard look at itself if "low enough" is even the right way to think about it.
+    
+> In this class we will teach and have you practice the **current common standard**, which is that **p-values less than 0.05** constitute **strong evidence AGAINST the null**. Such a p-value is sometimes referred to as "statistically significant".
+
+---
+
+* Is a p-value of 0.049 really that much better than 0.051? No, it is not. In this sense, "statistical significance" is a bit of a silly concept.
+
+* However, since the arbitrary cut-off of 0.05 was proposed in 1925 by one of the most important statisticians of all time, Ronald Fisher, it has stuck.
+
+---
+
+> Generally, **p-values under 0.05** are interpreted as **We find strong evidence against the null hypothesis.** However, this technical language is not what we would present to a colleague, or in a paper.
+
+> The "**in context**" interpretation is more important: In this example, **There is strong evidence that chimpanzee A would choose the prosocial choice more than half the time in the long run.**
+
+* This is **not a statement about truth**, this is a **measure of the statistical evidence against the null hypothesis.**
+
+---
+
+* If we had instead observed a **p-value above 0.05**, we would say that we have **failed to find evidence against the null hypothesis.**
+
+* In context, we might say that **We fail to find evidence that chimpanzee A is not picking randomly,** or that **The data is consistent with the idea that chimpanzee A is picking randomly. (p = 0.001, single proportion binomial test)**
+
+# Hypothesis Testing: TL;DR
+
+* Step 1: State the statistical **model** for the data.
+* Step 2: State your **hypotheses**. $H_0$ should be a statement about a parameter with $=$, and $H_A$ should be another statement about that same parameter with $>$, $<$, or $\neq$.
+* Step 3: Identify your **test statistic**, and its **null distribution** (by plugging in the $H_0$ statement).
+* Step 4: Identify the set of relevant **outcomes**; those which are as or less likely than your observed value of the test statistic on the null distribution, AND constitute evidence for $H_A$.
+* Step 5: Calculate the **p-value**, the total probability of the outcomes from step 4 on the null distribution.
+* Step 6: Interpret the p-value in context using the 0.05 threshold.
+
+# The Psychic Example
+
+* A psychic is handed a random card from a deck, face down, and asked to determine what suit the card is without looking at it. (The card may be one of four suits, each with equal probability; "hearts", "diamonds", "spades", or "clubs").
+
+* The psychic claims they can sometimes tell what the suit is without looking at the card.
+
+* This experiment was repeated 200 times, and the psychic got the suit right 57 times.
+
+> Conduct a hypothesis test to assess the evidence for the psychic's ability.
+
+---
+
+**Step 1: Model and Assumptions**
+
+Let $X$ be the observed number of correct guesses from $n = 200$ trials.
+
+Let $p$ be the true probability of the psychic getting the suit right on an individual trial.
+
+Then,
+
+$$
+X \sim Binom(200, p)
+$$
+
+We may verify the BINS assumptions; **B**: each trial is right or wrong, **I**: the trials are independent, **N**: There is a fixed sample size, $n = 200$, and **S**: each trial has the same probability of success, $p$.
+
+---
+
+**Step 2: State Hypotheses**
+
+* The null hypothesis captures the idea that the psychic is picking randomly, or has no psychic ability.
+
+* If the psychic is picking randomly, they have a 1 in 4 chance of getting the suit right.
+
+$$
+H_0: p = 0.25
+$$
+
+* The alternative hypothesis captures the thing that you seek to prove; that the psychic truly has a better-than-random chance of getting it right.
+
+$$
+H_A: p > 0.25
+$$
+
+---
+
+**Step 3: Test Statistic and Null Distribution**
+
+* We know that $X \sim Binom(200, p)$. Under the null hypothesis which states $p = 0.25$, $X \sim Binom(200, p)$.
+
+* The observed data is X = 57.
+
+---
+
+**Step 4: Identify Relevant Outcomes**
+
+```{r}
+gbinom(200, 0.25, scale = TRUE) +
+  geom_vline(xintercept = 57, color = "red")
+```
+
+*Note: This test statistic is not that far from what we expect under the null hypothesis, so we probably will fail to reject the null.*
+
+* This null distribution is NOT symmetric, despite what your eyes may tell you ($p = 0.25$, Binomial distribution is only symmetric when $p = 0.5$).
+
+* To identify all outcomes **as or less likely than X = 57**, we need to do some custom investigation.
+
+```{r}
+dbinom(57, 200, 0.25)
+```
+
+* Visually, we expect the threshold to be around X = 43, but we have to confirm:
+
+```{r}
+tibble(
+  x = 38:45,
+  prob = dbinom(x, 200, 0.25)
+)
+```
+
+* X = 43 is more likely than X = 57, so it is NOT included in this set of outcomes. X = 42 and below are the outcomes of interest.
+
+* Thus, the set of all outcomes as or less likely than $X = 57$ on $Binom(200, 0.25)$ is $X <= 42$ and $X >= 57$. However, only $X >= 57$ constitutes evidence for the alternative hypothesis, $H_A: p > 0.25$.
+
+---
+
+**Step 5: Calculate P-Value**
+
+* We wish to calculate $P(Binom(200, 0.25) >= 57)$.
+
+* We will do this by calculating $1 - P(Binom(200, 0.25) <= 56)$.
+
+```{r}
+# lower.tail = FALSE is same as 1 - pbinom(...)
+pbinom(57 - 1, 200, 0.25, lower.tail = FALSE)
+```
+
+---
+
+**Step 6: Interpret in Context**
+
+**We fail to find strong evidence that the psychic is not picking randomly. (p = 0.14, single proportion binomial test)**
+
+---
+
+## Two-Sided Alternatives
+
+- What if we had instead considered the alternative hypothesis $H_A: p \neq 0.25$?
+
+* Everything would have remained the same until **Step 4: Identify Relevant Outcomes from Data + Alternative Hypothesis**.
+
+* We previously wrote:
+
+*The set of all outcomes as or less likely than $X = 57$ on $Binom(200, 0.25)$ is $X <= 42$ and $X >= 57$. However, only $X >= 57$ constitutes evidence for the alternative hypothesis, $H_A: p > 0.25$.*
+
+* With $H_A: p \neq 0.25$, BOTH $X <= 42$ and $X >= 57$ constitute evidence for the alternative hypothesis! We call this a "two tailed test" because we are calculating area at the two extreme ends of the null distribution.
+
+```{r}
+gbinom(200, 0.25) +
+  geom_binom_density(200, 0.25, b = 42, color = "red") +
+  geom_binom_density(200, 0.25, a = 57, color = "red")
+```
+
+* Our p-value is thus:
+
+```{r}
+# Left side + right side (right side is the one we already calculated, left side is a more straightforward pbinom)
+pbinom(42, 200, 0.25) + pbinom(57 - 1, 200, 0.25, lower.tail = FALSE)
+```
+
+* And our interpretation remains the same, since the p-value > 0.05.
+
+* If we had considered this "two-sided" alternative hypothesis and gotten a **significant** p-value, we would conclude we have **strong evidence the psychic was not picking randomly**, but we could not infer **whether they were better or worse than random**, since our alternative hypothesis included both directions.
+
+# Inference on a Difference of Proportions
+
+* The previous sections considered inference on **a single proportion.**
+
+* However, many real questions consider inference on **a difference between two proportions.**
+
+> Inference on **a difference between two proportions** is more complex than just doing single-proportion inference twice and subtracting. It uses the same conceptual framework, but with a different test statistic and sampling distribution.
+
+## CI for a Difference of Proportions
+
+* An inference question that is answered by a confidence interval for a difference in proportions is:
+
+> What is our estimate of the difference between the probability chimpanzee C makes the prosocial choice WITH a partner and the probability chimpanzee C makes the prosocial choice WITHOUT a partner?
+
+> **We do not care about the individual values of $p_1$ and $p_2$; only their difference!** 
+
+* Do **NOT** just create a CI for $p_1$ and a CI for $p_2$ and subtract them!
+
+* Recall the general form of a confidence interval:
+
+$$
+\text{Point Estimate } \pm \text{ Quantile Confidence Score * Standard Error of PE}
+$$
+
+* Intuitively, our point estimate of the difference in true proportions $p_1 - p_2$ is $\hat{p_1} - \hat{p_2}$, the difference in sample proportions.
+
+```{r}
+chimpanzee %>% 
+  filter(actor == "C") %>% 
+  mutate(HasAPartner = (partner == "none")) %>% 
+  group_by(HasAPartner) %>% 
+  summarize(totalProsocial = sum(prosocial),
+            totalSelfish = sum(selfish), 
+            n = totalProsocial + totalSelfish, 
+            p_hat = totalProsocial/n)
+```
+
+
+- Our point estimate for the difference in proportions is 63.3 - 56.7 = 6.6%.
+
+### Sampling Distribution of Difference in Sample Proportions
+
+* To determine the quantile confidence score and standard error, we have to know the **sampling distribution** of our point estimate.
+
+* It can be verified through theory or simulated that:
+
+> The sampling distribution of $\hat{p_1} - \hat{p_2}$ is $N(p_1 - p_2, SE(\hat{p_1} - \hat{p_2}))$, where the standard error is $\text{SE}(\hat{p}_1 - \hat{p}_2) = \sqrt{ \text{SE}(\hat{p}_1)^2 + \text{SE}(\hat{p}_2)^2 } = \sqrt{ \frac{p_1(1-p_1)}{n_1} + \frac{p_2(1-p_2)}{n_2} }$.
+
+* There are two important conclusions here:
+
+1) The sampling distribution is normal, so we can continue to use `qnorm` in our calculation of the quantile confidence score.
+
+2) The standard error is known, but based on $p$; so we will have to make an adjustment, as we did for a single proportion.
+
+### Agresti-Coffe Adjustment for p1-p2
+
+> The **Agresti-Coffe** adjustment can be thought of as the **difference in proportions** version of the single proportion **Agresti-Coull** adjustment.
+
+> Just like its single proportion equivalent, this "A-C" adjustment adds two successes and four failures to the dataset; but for two proportions, we **split them evenly amongst the two groups.**
+
+> $\hat{p_{1AC}} = \frac{X_1 + 1}{n_1 + 2}$, and $\hat{p_{2AC}} = \frac{X_2 + 2}{n_2 + 2}$. These adjustments carry through to the calculations of the point estimate and standard error.
+
+* With the Agresti-Coffe adjustment,
+
+$$
+\text{SE}(\hat{p}_{1AC} - \hat{p}_{2AC}) = \sqrt{ \frac{\hat{p}_{1AC}(1-\hat{p}_{1AC})}{n_1+2} + \frac{\hat{p}_{2AC}(1-\hat{p}_{2AC})}{n_2+2} }
+$$
+
+### Final Formula
+
+* Using the Agresti-Coffe adjustment, we can finally arrive at our final form for a confidence interval for a difference in proportions:
+
+$$
+\hat{p_{1AC}} - \hat{p_{2AC}} \pm \text{qnorm(C + (1-C)/2)} * \sqrt{ \frac{\hat{p}_{1AC}(1-\hat{p}_{1AC})}{n_1+2} + \frac{\hat{p}_{2AC}(1-\hat{p}_{2AC})}{n_2+2} }
+$$
+
+```{r}
+# Four inputs: Observed successes and sample size in group 1, X1 and n1, and for group2, X2 and n2
+x1 = 57
+n1 = 90
+x2 = 17
+n2 = 30
+
+# Confidence level
+alpha = 0.95
+
+# We will use "tilde" to refer to the AC-adjusted statistics
+# This code computes the AC Confidence Interval for the true difference in two proportions
+ntilde1 = n1 + 2
+ntilde2 = n2 + 2
+ptilde1 = (x1+1)/ntilde1
+ptilde2 = (x2+1)/ntilde2
+
+pe = ptilde1 - ptilde2
+
+se1 = sqrt( ptilde1*(1-ptilde1)/ntilde1 )
+se2 = sqrt( ptilde2*(1-ptilde2)/ntilde2 )
+se = sqrt(se1^2 + se2^2 )
+moe = qnorm(alpha + (1 - alpha)/2) * se
+
+left = pe - moe
+right = pe + moe
+
+c(left, right)
+```
+
+* We are NOT constructing a confidence interval for a single proportion - we are constructing a confidence interval for $p_1 - p_2$, a **difference in proportions**. That **difference can be negative!**
+
+* In context, we would interpret this as:
+
+> We are 95% confident that when Chimpanzee C has a partner, the change in the probability of making a prosocial choice compared to no partner is between -13% and +26.6%.
+
+## Hypothesis Testing for a Difference of Proportions
+
+* An inference question that could be answered with a difference in proportions hypothesis test is:
+
+> Is the true probability of chimpanzee C making the pro-social choice HIGHER when there is a partner in the neighboring room?
+
+* Alternatively, to better reflect the technical details of the test:
+
+> Is the difference between the probability chimpanzee C makes the prosocial choice WITH a partner and the probability chimpanzee C makes the prosocial choice WITHOUT a partner 0 or greater than 0?
+
+### Step 1: Statistical Model
+
+- $X_1$ is the observed number of pro-social choices of Chimpanzee C with a partner from $n_1 = 90$ trials.
+- $X_2$ is the observed number of pro-social choicse of Chimpanzee C with a partner from $n_2 = 30$ trials.
+
+- $p_1$ is the true probability that Chimpanzee C makes the pro-social choice when there is a partner.
+- $p_2$ is the true probability that Chimpanzee C makes the pro-social choice when there is no partner.
+
+$$
+X_1 \sim \text{Binomial}(90,p_1) \\
+X_2  \sim \text{Binomial}(30,p_2)
+$$
+
+We do not list out the BINS assumptions here, but we may assume that they are met.
+
+### Step 2: State Hypotheses
+
+* Recall that the null hypothesis captures the idea there is **no pattern or relationship**. This extends to the idea of there being **no difference** in two parameter values.
+
+$$
+H_0: p_1 \neq p_2
+$$
+
+$$
+H_A: p_1 > p_2
+$$
+
+> This step makes it appear as if we care about the individual values of $p_1$ and $p_2$. **We do not care about their individual values; only their difference!**
+
+* Knowing that $p_1 - p_2 > 0$ is all we care about!
+
+* To emphasize this conceptual point, we often write these hypotheses in this equivalent way:
+
+$$
+H_0: p_1 - p_2 \neq 0, H_A: p_1 - p_2 > 0
+$$
+
+### Step 3: Test Statistic and Null Distribution
+
+* I promised you that the test statistics would get more complicated... here we are!
+
+* We know from the confidence intervals section that $\hat{p_1} - \hat{p_2} \sim N(p_1 - p_2, SE(\hat{p_1} - \hat{p_2}))$.
+
+* We can standardize this to:
+
+$$
+T = \frac{(\hat{p_1} - \hat{p_2}) - (p_1 - p_2)}{SE(\hat{p_1} - \hat{p_2})} \sim N(0, 1)
+$$
+
+* Our null hypothesis says that $p_1 - p_2 = 0$, so that term goes away.
+
+* However, $SE(\hat{p_1} - \hat{p_2}) = \sqrt{ \frac{p_1(1-p_1)}{n_1} + \frac{p_2(1-p_2)}{n_2}}$ is still based on $p_1$ and $p_2$. The null hypothesis doesn't give us specific values, it just says that they are equal.
+
+* We make a slight "adjustment" here to account for this. If there is some $p$ such that $p_1 = p_2 = p$, then the standard error becomes $\sqrt{ \frac{p(1-p)}{n_1} + \frac{p(1-p)}{n_2}}$, and now we just need to estimate $p$.
+
+* We estimate $p$ with the global proportion of successes across both groups: $\bar{p} = \frac{X_1 + X_2}{n_1 + n_2}$.
+
+* Finally, our test statistic and null distribution are:
+
+$$
+\frac{(\hat{p_1} - \hat{p_2}) - (0)}{\sqrt{ \frac{\bar{p}(1-\bar{p})}{n_1} + \frac{\bar{p}(1-\bar{p})}{n_2}}} \sim N(0, 1)
+$$
+
+### Step 4: Identify Relevant Outcomes from Data + Alt. Hyp
+
+* Our observed value of the test statistic is:
+
+```{r}
+x1 = 57
+n1 = 90
+x2 = 17
+n2 = 30
+
+pbar = (x1 + x2)/(n1+n2)
+
+numerator = (x1/n1) - (x2/n2)
+denominator = sqrt((pbar*(1-pbar)/n1) + (pbar*(1-pbar)/n2))
+
+test_stat = numerator/denominator
+test_stat
+```
+
+* This test statistic, which is a standardized score for the difference in sample proportions, is 0.65.
+
+```{r}
+# Null distribution was N(0, 1)
+gnorm() +
+  geom_vline(xintercept = test_stat, color = "red")
+```
+
+* The outcomes which are as or less likely than `test_stat` on our null distribution are $X \geq 0.65$ and $X \leq -0.65$, because the normal distribution is symmetric.
+
+* However, only $X \geq 0.65$ constitutes evidence for our alternative hypothesis, $H_A: p_1 > p_2$.
+
+### Step 5: Calculate a P-Value
+
+* The p-value is the probability of getting the outcomes identified in step 4 on the null distribution.
+
+* Here, this is $P(N(0,1) \geq 0.65)$.
+
+* Recall: continuous areas, caution to the wind! We are still calculating an area to the right so we use `1 - ` or `lower.tail = FALSE`, but we don't need to adjust `test_stat` at all.
+
+```{r}
+1 - pnorm(test_stat, mean = 0, sd = 1)
+```
+### Step 6: Interpret in Context
+
+> We fail to find evidence that the true probability of Chimpanzee C making the prosocial choice is different with a partner vs. without (p = 0.25, one-sided test for difference in proportions.)
+
+
