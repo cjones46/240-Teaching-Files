@@ -75,7 +75,7 @@ chimpanzee = read_csv("../../data/chimpanzee.csv")
 head(chimpanzee)
 ```
 
-* For example, when A was paired with I, they made 22/30 prosocial choicse. When A had no partner ("none"), they made 16/30 prosocial choices.
+* For example, when A was paired with I, they made 22/30 prosocial choices. When A had no partner ("none"), they made 16/30 prosocial choices.
 
 *The only exception is that G and A only completed ten trials together in the dataset.* 
 
@@ -113,7 +113,7 @@ ggplot(sum1, aes(x = actor, y = pct_prosocial,
                  fill = session_type)) +
   geom_col(color = "black",
            position = position_dodge2(preserve = "single")) +
-  scale_y_continuous(labels = percent_format(scale = 1)) +
+  #scale_y_continuous(labels = percent_format(scale = 1)) +
   labs(
     x = "Chimpanzee",
     y = "Pro-social Choice Probability",
@@ -448,9 +448,9 @@ true_p + qnorm(conf.level + (1 - conf.level) / 2) * stdError
 gnorm(true_p, stdError) +
   geom_norm_fill(true_p, stdError, a = leftEndpoint, b = rightEndpoint, alpha = 0.5) +
   annotate("segment", x = true_p+0.005, xend = rightEndpoint, y = 0.25, yend = 0.25, arrow = arrow(ends = "last", length = unit(.2,"cm"))) +
-  annotate("text", x = (true_p + rightEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) + SE", size = 3)+
+  annotate("text", x = (true_p + rightEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) * SE", size = 3)+
   annotate("segment", x = leftEndpoint, xend = true_p - 0.005, y = 0.25, yend = 0.25, arrow = arrow(ends = "first", length = unit(.2,"cm"))) +
-  annotate("text", x = (true_p + leftEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) + SE", size = 3)
+  annotate("text", x = (true_p + leftEndpoint)/2, y = 0.4, label = "qnorm(C + (1-C)/2) * SE", size = 3)
 ```
 
 * Finally, putting it all together, going out this far in each direction from whatever random $\hat{p}$ we get will, by definition, contain the true $p$ 95% of the time! (or whatever your desired confidence was)
@@ -1243,7 +1243,7 @@ chimpanzee %>%
 
 > Just like its single proportion equivalent, this "A-C" adjustment adds two successes and four failures to the dataset; but for two proportions, we **split them evenly amongst the two groups.**
 
-> $\hat{p_{1AC}} = \frac{X_1 + 1}{n_1 + 2}$, and $\hat{p_{2AC}} = \frac{X_2 + 2}{n_2 + 2}$. These adjustments carry through to the calculations of the point estimate and standard error.
+> $\hat{p_{1AC}} = \frac{X_1 + 1}{n_1 + 2}$, and $\hat{p_{2AC}} = \frac{X_2 + 1}{n_2 + 2}$. These adjustments carry through to the calculations of the point estimate and standard error.
 
 * With the Agresti-Coffe adjustment,
 
@@ -1308,7 +1308,7 @@ c(left, right)
 ### Step 1: Statistical Model
 
 - $X_1$ is the observed number of pro-social choices of Chimpanzee C with a partner from $n_1 = 90$ trials.
-- $X_2$ is the observed number of pro-social choicse of Chimpanzee C with a partner from $n_2 = 30$ trials.
+- $X_2$ is the observed number of pro-social choices of Chimpanzee C with NO partner from $n_2 = 30$ trials.
 
 - $p_1$ is the true probability that Chimpanzee C makes the pro-social choice when there is a partner.
 - $p_2$ is the true probability that Chimpanzee C makes the pro-social choice when there is no partner.
@@ -1325,7 +1325,7 @@ We do not list out the BINS assumptions here, but we may assume that they are me
 * Recall that the null hypothesis captures the idea there is **no pattern or relationship**. This extends to the idea of there being **no difference** in two parameter values.
 
 $$
-H_0: p_1 \neq p_2
+H_0: p_1 = p_2
 $$
 
 $$
@@ -1339,7 +1339,7 @@ $$
 * To emphasize this conceptual point, we often write these hypotheses in this equivalent way:
 
 $$
-H_0: p_1 - p_2 \neq 0, H_A: p_1 - p_2 > 0
+H_0: p_1 - p_2 = 0, H_A: p_1 - p_2 > 0
 $$
 
 ### Step 3: Test Statistic and Null Distribution
