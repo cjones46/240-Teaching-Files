@@ -415,7 +415,7 @@ t.test(times)
 
 ```{r}
 # Give t.test() data like this:
-bm %>% select(Time) %>% head()
+bm %>% pull(Time) %>% head()
 
 # NOT data like this:
 bm_summary
@@ -539,7 +539,7 @@ left_tail + right_tail
 
 ## Step 6: Interpretation
 
-> There is strong evidence for the true underlying average time for a 18-34 year old female Boston Marathon runner in 2010 being greater than 4 hours (p $\approx$ 0, one sample t-test).
+> There is strong evidence for the true underlying average time for a 18-34 year old female Boston Marathon runner in 2010 being different than 4 hours (p $\approx$ 0, one sample t-test).
 
 ## Same Calculation with t.test
 
