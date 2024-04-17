@@ -1,5 +1,5 @@
 ---
-title: "STAT 240: Linear Regression: Intro"
+title: "STAT 240: Linear Regression: Inference"
 author: "Cameron Jones"
 date: "Spring 2024"
 output: rmdformats::readthedown
@@ -691,7 +691,7 @@ ggplot(lions, aes(age, black)) +
 
 ## Confidence Intervals for the True Line's Height at Some X
 
-> The goal of a confidence interval for the true line's height is to obtain a numeric interval which, given some $X$ value, will contain the $Y$ value of the **true underlying line's height, $\beta_0 + \beta_1 X**, with known confidence.
+> The goal of a confidence interval for the true line's height is to obtain a numeric interval which, given some $X$ value, will contain the $Y$ value of the **true underlying line's height, $\beta_0 + \beta_1 X$**, with known confidence.
 
 > Mathematically, we write this as an interval for $E(Y \mid x^*)$; read as "the expectation of Y given x-star", meaning we want to predict the height of the true underlying line at a known value of x, which is x-star.
 
